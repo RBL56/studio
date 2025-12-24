@@ -12,6 +12,7 @@ import { BotProvider } from '@/context/bot-context';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
+import { DigitAnalysisTool } from '@/components/bot-builder/digit-analysis-tool';
 import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
 
 export default function BotBuilderPage() {
@@ -111,17 +112,12 @@ export default function BotBuilderPage() {
           </Card>
         </TabsContent>
         <TabsContent value="dcircle">
-            <Card>
-                <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <Circle className="h-6 w-6" />
-                    DCircle
-                </CardTitle>
-                </CardHeader>
-                <CardContent>
-                <p>DCircle content will be here.</p>
-                </CardContent>
-            </Card>
+          <BotProvider>
+            <FormProvider {...formMethods}>
+                <DigitAnalysisTool />
+                <StartTradingButton />
+            </FormProvider>
+          </BotProvider>
         </TabsContent>
         <TabsContent value="tradingview">
           <Card>

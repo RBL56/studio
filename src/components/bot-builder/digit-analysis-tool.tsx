@@ -1,127 +1,62 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useDerivApi } from '@/context/deriv-api-context';
-import { VOLATILITY_MARKETS } from '@/lib/constants';
+import { useState, useEffect, useRef, useMemo } from 'react';
 
 const colors = ["#22c55e", "#eab308", "#f97316", "#ef4444"]; // Green to Red
 const MAX_TICKS = 1000;
 
 export function DigitAnalysisTool() {
-    const { api, isConnected } = useDerivApi();
     const [market, setMarket] = useState('R_100');
     const [ticks, setTicks] = useState<{ price: number; digit: number }[]>([]);
     const [currentPrice, setCurrentPrice] = useState<string>('--');
-    const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
-
     const digitBoxesRef = useRef<(HTMLDivElement | null)[]>([]);
 
-    const memoizedVolatilityMarkets = useMemo(() => [
-        ...VOLATILITY_MARKETS.filter(m => !m.symbol.startsWith('1HZ')),
-        ...VOLATILITY_MARKETS.filter(m => m.symbol.startsWith('1HZ')),
-    ], []);
-
-
-    const forgetPreviousSubscriptions = useCallback(() => {
-        if (api && subscriptionId) {
-            try {
-                api.send(JSON.stringify({ forget: subscriptionId }));
-                setSubscriptionId(null);
-            } catch (e) {
-                console.error("Error forgetting subscription:", e);
-            }
-        }
-    }, [api, subscriptionId]);
-
     useEffect(() => {
-        if (!api || !isConnected) return;
-
-        forgetPreviousSubscriptions();
-        setTicks([]);
-
-        const subscribe = () => {
-            api.send(JSON.stringify({
-                ticks_history: market,
-                count: MAX_TICKS,
-                end: 'latest',
-                subscribe: 1
-            }));
-        };
-
-        if (api.readyState === WebSocket.OPEN) {
-            subscribe();
-        } else {
-            api.addEventListener('open', subscribe, { once: true });
+        // Initialize with 1000 ticks
+        const initialTicks: {price: number, digit: number}[] = [];
+        for (let i = 0; i < MAX_TICKS; i++) {
+            const price = (1000 + Math.random() * 100).toFixed(3);
+            const digit = parseInt(price.slice(-1));
+            initialTicks.unshift({
+                price: parseFloat(price),
+                digit: digit
+            });
         }
+        setTicks(initialTicks);
 
-        const handleMessage = (event: MessageEvent) => {
-            const data = JSON.parse(event.data);
-            if (data.error) {
-                return;
-            }
-
-            if (data.msg_type === 'history') {
-                const historyTicks = data.history.prices.map((price: number) => {
-                    const priceStr = price.toString();
-                    return { price, digit: parseInt(priceStr[priceStr.length - 1]) };
-                });
-                setTicks(historyTicks);
-                if (historyTicks.length > 0) {
-                    setCurrentPrice(historyTicks[historyTicks.length - 1].price.toFixed(getPrecision(market)));
+        // Simulate incoming ticks
+        const interval = setInterval(() => {
+            const price = (1000 + Math.random() * 100).toFixed(3);
+            const digit = parseInt(price.slice(-1));
+            
+            setCurrentPrice(price);
+            
+            setTicks(prevTicks => {
+                const newTicks = [{ price: parseFloat(price), digit: digit }, ...prevTicks];
+                if (newTicks.length > MAX_TICKS) {
+                    return newTicks.slice(0, MAX_TICKS);
                 }
-            }
+                return newTicks;
+            });
+        }, 1000);
 
-            if (data.msg_type === 'tick') {
-                if (data.subscription?.id && !subscriptionId) {
-                    setSubscriptionId(data.subscription.id);
-                }
-                const newTick = data.tick;
-                const price = newTick.quote;
-                const priceStr = price.toString();
-                const digit = parseInt(priceStr[priceStr.length - 1]);
-                
-                setCurrentPrice(price.toFixed(getPrecision(market)));
-                setTicks(prev => [{ price, digit }, ...prev.slice(0, MAX_TICKS - 1)]);
-            }
-        };
-
-        api.addEventListener('message', handleMessage);
-
-        return () => {
-            api.removeEventListener('message', handleMessage);
-            // The forget is now handled at the start of the effect
-        };
-
-    }, [api, isConnected, market]);
-
-    const getPrecision = (symbol: string) => {
-        const marketInfo = VOLATILITY_MARKETS.find(m => m.symbol === symbol);
-        if (marketInfo) {
-            if (marketInfo.name.includes('(1s)')) return 3;
-            if (marketInfo.symbol === 'R_10' || marketInfo.symbol === 'R_25') return 4;
-        }
-        return 2; // Default for others like R_50, R_75, R_100
-    }
-
-    const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setMarket(e.target.value);
-    };
+        return () => clearInterval(interval);
+    }, [market]);
 
     const analysis = useMemo(() => {
         if (ticks.length === 0) return null;
 
         const digitCounts = Array(10).fill(0);
-        const currentTicks = ticks.slice(0, MAX_TICKS);
-        currentTicks.forEach(tick => {
+        ticks.forEach(tick => {
             digitCounts[tick.digit]++;
         });
 
-        const percentages = digitCounts.map(count => (count / currentTicks.length) * 100);
+        const percentages = digitCounts.map(count => (count / MAX_TICKS) * 100);
 
         let maxCount = -1;
         let mostFrequentDigit = -1;
-        let highestPercentage = -1;
         let mostVolatileDigit = -1;
+        let highestPercentage = -1;
 
         percentages.forEach((p, i) => {
             if (digitCounts[i] > maxCount) {
@@ -138,7 +73,7 @@ export function DigitAnalysisTool() {
         for (let i = 0; i < 10; i += 2) {
             evenCount += digitCounts[i];
         }
-        const evenPercentage = (evenCount / currentTicks.length) * 100;
+        const evenPercentage = (evenCount / MAX_TICKS) * 100;
         const oddPercentage = 100 - evenPercentage;
 
         // Volatility calculations
@@ -172,8 +107,7 @@ export function DigitAnalysisTool() {
             oddPercentage,
             overallVol,
             digitVol,
-            evenOddVol,
-            totalTicks: currentTicks.length
+            evenOddVol
         };
     }, [ticks]);
 
@@ -182,8 +116,9 @@ export function DigitAnalysisTool() {
 
         const currentDigit = ticks[0].digit;
         const activeBox = digitBoxesRef.current[currentDigit];
-
+        
         if (activeBox) {
+            digitBoxesRef.current.forEach(box => box?.classList.remove('active-digit'));
             activeBox.classList.add('active-digit');
             const timer = setTimeout(() => {
                 activeBox.classList.remove('active-digit');
@@ -193,11 +128,27 @@ export function DigitAnalysisTool() {
     }, [ticks, analysis]);
 
 
-    const getVolClass = (vol: 'High' | 'Medium' | 'Low') => {
+    const getVolClass = (vol: 'High' | 'Medium' | 'Low' | undefined) => {
         if (vol === 'High') return 'vol-high';
         if (vol === 'Medium') return 'vol-medium';
         return 'vol-low';
     };
+
+    const VOLATILITY_MARKETS_SIM = [
+        { name: "Volatility 10", symbol: "R_10" },
+        { name: "Volatility 25", symbol: "R_25" },
+        { name: "Volatility 50", symbol: "R_50" },
+        { name: "Volatility 75", symbol: "R_75" },
+        { name: "Volatility 100", symbol: "R_100" },
+        { name: "Volatility 10 (1s)", symbol: "1HZ10V" },
+        { name: "Volatility 25 (1s)", symbol: "1HZ25V" },
+        { name: "Volatility 30 (1s)", symbol: "1HZ30V" },
+        { name: "Volatility 50 (1s)", symbol: "1HZ50V" },
+        { name: "Volatility 75 (1s)", symbol: "1HZ75V" },
+        { name: "Volatility 90 (1s)", symbol: "1HZ90V" },
+        { name: "Volatility 100 (1s)", symbol: "1HZ100V" },
+    ];
+
 
     return (
         <>
@@ -274,9 +225,9 @@ export function DigitAnalysisTool() {
                                 <div className="stat-label">Current Price</div>
                             </div>
                             <div className="stat-box">
-                                <select value={market} onChange={handleMarketChange} className="market-select">
+                                <select value={market} onChange={(e) => setMarket(e.target.value)} className="market-select">
                                     <optgroup label="All Markets">
-                                        {memoizedVolatilityMarkets.map(m => (
+                                        {VOLATILITY_MARKETS_SIM.map(m => (
                                             <option key={m.symbol} value={m.symbol}>{m.name}</option>
                                         ))}
                                     </optgroup>
@@ -327,15 +278,15 @@ export function DigitAnalysisTool() {
                         <div className="volatility-grid">
                             <div className="vol-item">
                                 <div className="vol-label">Overall Volatility</div>
-                                <div className={`vol-value ${getVolClass(analysis?.overallVol ?? 'Low')}`}>{analysis?.overallVol ?? '--'}</div>
+                                <div className={`vol-value ${getVolClass(analysis?.overallVol)}`}>{analysis?.overallVol ?? '--'}</div>
                             </div>
                             <div className="vol-item">
                                 <div className="vol-label">Digit Distribution</div>
-                                <div className={`vol-value ${getVolClass(analysis?.digitVol ?? 'Low')}`}>{analysis?.digitVol ?? '--'}</div>
+                                <div className={`vol-value ${getVolClass(analysis?.digitVol)}`}>{analysis?.digitVol ?? '--'}</div>
                             </div>
                             <div className="vol-item">
                                 <div className="vol-label">Even/Odd Volatility</div>
-                                <div className={`vol-value ${getVolClass(analysis?.evenOddVol ?? 'Low')}`}>{analysis?.evenOddVol ?? '--'}</div>
+                                <div className={`vol-value ${getVolClass(analysis?.evenOddVol)}`}>{analysis?.evenOddVol ?? '--'}</div>
                             </div>
                             <div className="vol-item">
                                 <div className="vol-label">Most Volatile Digit</div>
@@ -348,11 +299,11 @@ export function DigitAnalysisTool() {
                                 <div className="stat-label">Most Frequent</div>
                             </div>
                             <div className="stat-box">
-                                <div className="stat-value">{analysis?.totalTicks ?? 0}</div>
+                                <div className="stat-value">{MAX_TICKS}</div>
                                 <div className="stat-label">In Window</div>
                             </div>
                             <div className="stat-box">
-                                <div className="stat-value">{analysis?.totalTicks ?? 0}</div>
+                                <div className="stat-value">{MAX_TICKS}</div>
                                 <div className="stat-label">Total Ticks</div>
                             </div>
                         </div>
