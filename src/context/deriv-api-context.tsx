@@ -47,6 +47,10 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
 
             if (data.error) {
                 console.error('Deriv API error:', data.error.message);
+                // Don't reject on subscription errors if already authorized
+                if (data.error.code === 'AlreadySubscribed') {
+                  return;
+                }
                 socket.close();
                 setToken(null);
                 setBalance(null);
@@ -62,8 +66,9 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                     setIsConnected(true);
                     setBalance(data.authorize.balance);
                     setAccountType(data.authorize.is_virtual ? 'demo' : 'real');
-                    // Subscribe to balance updates
+                    // Subscribe to balance and open contract updates
                     socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+                    socket.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                     resolve();
                 } else {
                     reject(new Error('Authorization failed.'));
@@ -96,6 +101,14 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const disconnect = useCallback(() => {
     tradingBot.stopBot();
     if (ws.current) {
+      if (ws.current.readyState === WebSocket.OPEN) {
+          try {
+              ws.current.send(JSON.stringify({ forget_all: 'proposal_open_contract' }));
+              ws.current.send(JSON.stringify({ forget_all: 'balance' }));
+          } catch(e) {
+              console.error("Error unsubscribing:", e);
+          }
+      }
       ws.current.close();
       ws.current = null;
     }

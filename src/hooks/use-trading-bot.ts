@@ -35,20 +35,18 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
     const configRef = useRef<BotConfigurationValues | null>(null);
     const currentStakeRef = useRef<number>(0);
     const isRunningRef = useRef(false);
+    const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const { toast } = useToast();
     
     const stopBot = useCallback(() => {
         if (!isRunningRef.current) return;
         isRunningRef.current = false;
-        setBotStatus('stopped');
-        if (api?.readyState === WebSocket.OPEN) {
-            try {
-                api.send(JSON.stringify({ forget_all: 'proposal_open_contract' }));
-            } catch (e) {
-                console.error("Error unsubscribing from contracts:", e);
-            }
+        if (stopTimeoutRef.current) {
+            clearTimeout(stopTimeoutRef.current);
+            stopTimeoutRef.current = null;
         }
-    }, [api]);
+        setBotStatus('stopped');
+    }, []);
 
     const getContractType = (predictionType: BotConfigurationValues['predictionType']) => {
         switch (predictionType) {
@@ -104,16 +102,20 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
     }, [api, totalProfit, stopBot, toast]);
 
     const handleMessage = useCallback((data: any) => {
+        if (!isRunningRef.current) return;
+
         if (data.error) {
             console.error("API Error:", data.error.message);
-            toast({ variant: "destructive", title: "API Error", description: data.error.message });
+            // Don't toast for `AlreadySubscribed` since we handle it gracefully.
+            if (data.error.code !== 'AlreadySubscribed') {
+                toast({ variant: "destructive", title: "API Error", description: data.error.message });
+            }
             if (data.error.code === 'AuthorizationRequired') {
                 stopBot();
             }
             return;
         }
 
-        if (!isRunningRef.current) return;
 
         if (data.msg_type === 'buy') {
             const newTrade: Trade = {
@@ -160,7 +162,8 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
 
             // Delay before next purchase if still running
             if (isRunningRef.current) {
-                setTimeout(purchaseContract, 250);
+                if (stopTimeoutRef.current) clearTimeout(stopTimeoutRef.current);
+                stopTimeoutRef.current = setTimeout(purchaseContract, 250);
             }
         }
     }, [purchaseContract, toast, stopBot]);
@@ -181,9 +184,6 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         
         isRunningRef.current = true;
         setBotStatus('running');
-
-        // Subscribe to contract proposals
-        api.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
         
         purchaseContract();
     }, [api, purchaseContract]);
