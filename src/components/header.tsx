@@ -6,9 +6,24 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Bot, LogIn } from 'lucide-react';
 import { ApiTokenDialog } from './api-token-dialog';
 import { useDerivApi } from '@/context/deriv-api-context';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from './ui/dialog';
 
 export default function Header() {
   const { isConnected } = useDerivApi();
+
+  const handleLoginRedirect = () => {
+    // In a real scenario, this would redirect to Deriv's OAuth page.
+    // For now, we just close the dialog.
+    console.log('Redirecting to Deriv for login...');
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,16 +53,33 @@ export default function Header() {
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
-           <ApiTokenDialog />
-           {!isConnected && (
+          <ApiTokenDialog />
+          {!isConnected && (
             <>
-              <Button variant="ghost">
-                <LogIn className="mr-2 h-4 w-4" />
-                Log In
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Log In
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="font-headline">Log in with Deriv</DialogTitle>
+                    <DialogDescription>
+                      You will be redirected to the official Deriv website to log in securely.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button onClick={handleLoginRedirect} className="w-full">
+                      Continue to Deriv
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               <Button>Sign Up</Button>
             </>
-           )}
+          )}
         </div>
       </div>
     </header>
