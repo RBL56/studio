@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { BacktestWithAIOutput } from '@/ai/flows/backtest-with-ai';
 import { StrategyForm } from '@/components/bot-builder/strategy-form';
-import { BacktestResults } from '@/components/bot-builder/backtest-results';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export type Strategy = {
@@ -13,8 +11,6 @@ export type Strategy = {
 };
 
 export default function BotBuilderPage() {
-  const [backtestResult, setBacktestResult] = useState<BacktestWithAIOutput | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
 
   return (
@@ -30,15 +26,13 @@ export default function BotBuilderPage() {
             </CardHeader>
             <CardContent>
               <StrategyForm
-                setBacktestResult={setBacktestResult}
-                setIsLoading={setIsLoading}
                 selectedStrategy={selectedStrategy}
               />
             </CardContent>
           </Card>
         </div>
         <div className="lg:col-span-2">
-          <BacktestResults result={backtestResult} isLoading={isLoading} />
+          {/* Backtest results were previously here */}
         </div>
       </div>
     </div>

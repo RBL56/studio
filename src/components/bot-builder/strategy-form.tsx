@@ -8,8 +8,6 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { runBacktestAction } from '@/lib/actions';
-import type { BacktestWithAIOutput } from '@/ai/flows/backtest-with-ai';
 import { FileUp, Loader2 } from 'lucide-react';
 import type { Strategy } from '@/app/page';
 import { useEffect } from 'react';
@@ -22,12 +20,10 @@ const strategyFormSchema = z.object({
 type StrategyFormValues = z.infer<typeof strategyFormSchema>;
 
 interface StrategyFormProps {
-  setBacktestResult: (result: BacktestWithAIOutput | null) => void;
-  setIsLoading: (loading: boolean) => void;
   selectedStrategy: Strategy | null;
 }
 
-export function StrategyForm({ setBacktestResult, setIsLoading, selectedStrategy }: StrategyFormProps) {
+export function StrategyForm({ selectedStrategy }: StrategyFormProps) {
   const { toast } = useToast();
   const form = useForm<StrategyFormValues>({
     resolver: zodResolver(strategyFormSchema),
@@ -48,29 +44,10 @@ export function StrategyForm({ setBacktestResult, setIsLoading, selectedStrategy
 
 
   const onSubmit = async (data: StrategyFormValues) => {
-    setIsLoading(true);
-    setBacktestResult(null);
-    try {
-      const result = await runBacktestAction({
-        tradingStrategy: data.strategy,
-      });
-
-      if (!result || !result.winLossProjection) {
-        throw new Error('Invalid response from AI.');
-      }
-
-      setBacktestResult(result);
-    } catch (error) {
-      console.error('Backtest failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error Running Backtest',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
-      });
-      setBacktestResult(null);
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Strategy Saved",
+      description: "Your strategy has been saved.",
+    });
   };
 
   return (
@@ -103,7 +80,7 @@ export function StrategyForm({ setBacktestResult, setIsLoading, selectedStrategy
                 />
               </FormControl>
               <FormDescription>
-                Describe your entry and exit conditions in plain English. The AI will interpret your strategy.
+                Describe your entry and exit conditions in plain English.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -116,10 +93,10 @@ export function StrategyForm({ setBacktestResult, setIsLoading, selectedStrategy
             <Button type="submit" disabled={form.formState.isSubmitting} className="flex-grow">
               {form.formState.isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Running Backtest...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
                 </>
               ) : (
-                'Run AI-Assisted Backtest'
+                'Save Strategy'
               )}
             </Button>
         </div>
