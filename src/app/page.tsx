@@ -12,6 +12,39 @@ import { TradeLog } from '@/components/bot-builder/trade-log';
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
 
+  const botInterface = (
+    <>
+      {isConnected ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <BotConfigurationForm />
+          </div>
+          <div className="space-y-8">
+            <BotStatus />
+            <TradeLog />
+          </div>
+        </div>
+      ) : (
+          <Card className="h-full flex flex-col justify-center items-center text-center">
+              <CardHeader>
+                  <div className="mx-auto bg-destructive/10 rounded-full p-3 w-fit mb-4">
+                      <ShieldAlert className="h-8 w-8 text-destructive" />
+                  </div>
+                  <CardTitle className="font-headline text-2xl">Connect Your Account</CardTitle>
+                  <CardDescription>
+                      Please connect your Deriv account using your API token to start trading.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                      You can get your API token from your Deriv account settings. Click the "API Token" button in the header to get started.
+                  </p>
+              </CardContent>
+          </Card>
+      )}
+    </>
+  );
+
   const renderTabContent = (title: string, icon: React.ReactNode, content: React.ReactNode) => (
     <Card>
       <CardHeader>
@@ -39,37 +72,10 @@ export default function BotBuilderPage() {
           </TabsList>
         </ScrollArea>
         <TabsContent value="speedbot">
-          {isConnected ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                  <BotConfigurationForm />
-                </div>
-                <div className="space-y-8">
-                  <BotStatus />
-                  <TradeLog />
-                </div>
-              </div>
-            ) : (
-                <Card className="h-full flex flex-col justify-center items-center text-center">
-                    <CardHeader>
-                        <div className="mx-auto bg-destructive/10 rounded-full p-3 w-fit mb-4">
-                            <ShieldAlert className="h-8 w-8 text-destructive" />
-                        </div>
-                        <CardTitle className="font-headline text-2xl">Connect Your Account</CardTitle>
-                        <CardDescription>
-                            Please connect your Deriv account using your API token to start trading.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground">
-                            You can get your API token from your Deriv account settings. Click the "API Token" button in the header to get started.
-                        </p>
-                    </CardContent>
-                </Card>
-            )}
+          {botInterface}
         </TabsContent>
         <TabsContent value="signalbot">
-          {renderTabContent("Signal Bot", <Signal className="h-6 w-6" />, <p>Signal Bot content will be here.</p>)}
+          {botInterface}
         </TabsContent>
         <TabsContent value="signalarena">
           {renderTabContent("Signal Arena", <Trophy className="h-6 w-6" />, <p>Signal Arena content will be here.</p>)}
