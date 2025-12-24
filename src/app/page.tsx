@@ -4,9 +4,7 @@ import { useState } from 'react';
 import type { BacktestWithAIOutput } from '@/ai/flows/backtest-with-ai';
 import { StrategyForm } from '@/components/bot-builder/strategy-form';
 import { BacktestResults } from '@/components/bot-builder/backtest-results';
-import { QuickStrategies } from '@/components/bot-builder/quick-strategies';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 
 export type Strategy = {
   name: string;
@@ -27,7 +25,7 @@ export default function BotBuilderPage() {
             <CardHeader>
               <CardTitle className="font-headline text-2xl">Create Your Trading Bot</CardTitle>
               <CardDescription>
-                Define your strategy using natural language, or get started with a template.
+                Define your strategy using natural language, or import an existing one.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -38,8 +36,6 @@ export default function BotBuilderPage() {
               />
             </CardContent>
           </Card>
-           <Separator />
-          <QuickStrategies onSelectStrategy={setSelectedStrategy} />
         </div>
         <div className="lg:col-span-2">
           <BacktestResults result={backtestResult} isLoading={isLoading} />
