@@ -25,6 +25,7 @@ interface DerivApiContextType {
   isBotRunning: boolean;
   startBot: (config: BotConfigurationValues) => void;
   stopBot: () => void;
+  resetStats: () => void;
 }
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
@@ -55,6 +56,27 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     totalProfitRef.current = totalProfit;
   }, [totalProfit]);
+  
+  const resetStats = useCallback(() => {
+    if (isRunningRef.current) {
+      toast({
+        variant: 'destructive',
+        title: 'Bot is running',
+        description: 'Please stop the bot before resetting stats.',
+      });
+      return;
+    }
+    setTrades([]);
+    setTotalProfit(0);
+    setTotalStake(0);
+    setTotalRuns(0);
+    setTotalWins(0);
+    setTotalLosses(0);
+    toast({
+        title: 'Stats Reset',
+        description: 'The trade log and statistics have been cleared.',
+    });
+  }, [toast]);
 
   const stopBot = useCallback(() => {
     if (!isRunningRef.current) return;
@@ -123,8 +145,6 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       setBalance(data.balance.balance);
     }
     
-    if (!isRunningRef.current && data.msg_type !== 'authorize') return;
-
     if (data.msg_type === 'buy') {
       const newTrade: Trade = {
         id: data.buy.contract_id.toString(),
@@ -140,6 +160,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (data.msg_type === 'proposal_open_contract' && data.proposal_open_contract?.contract_id) {
+        if (!isRunningRef.current) return;
         const contract = data.proposal_open_contract;
         if (!contract.is_sold) return; // Contract not finished yet
 
@@ -239,18 +260,13 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     configRef.current = config;
     currentStakeRef.current = config.initialStake;
     
-    setTrades([]);
-    setTotalProfit(0);
-    setTotalStake(0);
-    setTotalRuns(0);
-    setTotalWins(0);
-    setTotalLosses(0);
+    resetStats();
     
     isRunningRef.current = true;
     setBotStatus('running');
     
     purchaseContract();
-  }, [purchaseContract]);
+  }, [purchaseContract, resetStats]);
 
   const disconnect = useCallback(() => {
     stopBot();
@@ -300,7 +316,8 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       totalLosses,
       isBotRunning,
       startBot,
-      stopBot
+      stopBot,
+      resetStats
     }}>
       {children}
     </DerivApiContext.Provider>

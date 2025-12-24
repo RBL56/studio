@@ -1,11 +1,12 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useDerivApi } from '@/context/deriv-api-context';
-import { Loader2, PlayCircle, Square, CircleDollarSign } from 'lucide-react';
+import { Loader2, PlayCircle, Square, CircleDollarSign, RotateCcw } from 'lucide-react';
+import { Button } from '../ui/button';
 
 export function BotStatus() {
-  const { botStatus, totalProfit, totalRuns, totalStake } = useDerivApi();
+  const { botStatus, totalProfit, totalRuns, totalStake, resetStats, isBotRunning } = useDerivApi();
 
   const getStatusContent = () => {
     switch (botStatus) {
@@ -74,6 +75,12 @@ export function BotStatus() {
             </div>
         </div>
       </CardContent>
+      <CardFooter>
+        <Button variant="outline" size="sm" className="w-full" onClick={resetStats} disabled={isBotRunning}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset Log
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
