@@ -3,3 +3,12 @@ export type Strategy = {
     description: string;
     details: string;
 };
+
+export type Trade = {
+    id: string;
+    description: string;
+    marketId: string;
+    stake: number;
+    payout: number;
+    isWin: boolean;
+};

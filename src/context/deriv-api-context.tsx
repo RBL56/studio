@@ -1,14 +1,18 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
+import type { BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
+import type { Trade } from '@/lib/types';
+import { useTradingBot, type TradingBot } from '@/hooks/use-trading-bot';
 
-interface DerivApiContextType {
+interface DerivApiContextType extends TradingBot {
   isConnected: boolean;
   token: string | null;
   balance: number | null;
   accountType: 'real' | 'demo' | null;
   connect: (token: string) => Promise<void>;
   disconnect: () => void;
+  api: WebSocket | null;
 }
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
@@ -21,6 +25,8 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [accountType, setAccountType] = useState<'real' | 'demo' | null>(null);
   const ws = useRef<WebSocket | null>(null);
+  
+  const tradingBot = useTradingBot(ws.current);
 
   const connect = useCallback(async (apiToken: string) => {
     if (ws.current) {
@@ -57,6 +63,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                     setAccountType(data.authorize.is_virtual ? 'demo' : 'real');
                     // Subscribe to balance updates
                     socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+                    tradingBot.setApi(socket); // Set the API for the trading bot
                     resolve();
                 } else {
                     reject(new Error('Authorization failed.'));
@@ -66,6 +73,11 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
             if (data.msg_type === 'balance') {
                 setBalance(data.balance.balance);
             }
+
+            // Forward messages to the trading bot
+            if (tradingBot.handleMessage) {
+                tradingBot.handleMessage(data);
+            }
         };
 
         socket.onclose = () => {
@@ -73,26 +85,29 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
             setToken(null);
             setBalance(null);
             setAccountType(null);
+            tradingBot.setApi(null);
         };
         
         socket.onerror = (error) => {
             console.error('WebSocket error:', error);
             reject(new Error('WebSocket connection error.'));
             setIsConnected(false);
+            tradingBot.setApi(null);
         };
     });
-  }, []);
+  }, [tradingBot]);
 
   const disconnect = useCallback(() => {
     if (ws.current) {
       ws.current.close();
       ws.current = null;
     }
+    tradingBot.stopBot();
     setToken(null);
     setBalance(null);
     setIsConnected(false);
     setAccountType(null);
-  }, []);
+  }, [tradingBot]);
 
   useEffect(() => {
     // Cleanup WebSocket on component unmount
@@ -104,7 +119,16 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <DerivApiContext.Provider value={{ isConnected, token, balance, accountType, connect, disconnect }}>
+    <DerivApiContext.Provider value={{ 
+        isConnected, 
+        token, 
+        balance, 
+        accountType, 
+        connect, 
+        disconnect,
+        api: ws.current,
+        ...tradingBot
+    }}>
       {children}
     </DerivApiContext.Provider>
   );
