@@ -36,16 +36,34 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
     const currentStakeRef = useRef<number>(0);
     const isRunningRef = useRef(false);
     const { toast } = useToast();
-
+    
     const stopBot = useCallback(() => {
+        if (!isRunningRef.current) return;
         isRunningRef.current = false;
         setBotStatus('stopped');
         // Unsubscribe from contract proposals
-        api?.send(JSON.stringify({ forget_all: 'proposal_open_contract' }));
+        if (api?.readyState === WebSocket.OPEN) {
+            api.send(JSON.stringify({ forget_all: 'proposal_open_contract' }));
+        }
     }, [api]);
 
+    const getContractType = (predictionType: BotConfigurationValues['predictionType']) => {
+        switch (predictionType) {
+            case 'matches': return 'DIGITMATCH';
+            case 'differs': return 'DIGITDIFF';
+            case 'even': return 'DIGITEVEN';
+            case 'odd': return 'DIGITODD';
+            case 'over': return 'DIGITOVER';
+            case 'under': return 'DIGITUNDER';
+            default: throw new Error(`Invalid prediction type: ${predictionType}`);
+        }
+    }
+
     const purchaseContract = useCallback(() => {
-        if (!api || !configRef.current || !isRunningRef.current) return;
+        if (!api || !configRef.current || !isRunningRef.current) {
+            if (isRunningRef.current) stopBot();
+            return;
+        };
     
         const config = configRef.current;
         const stake = currentStakeRef.current;
@@ -66,13 +84,15 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         setTotalStake(prev => prev + stake);
         setTotalRuns(prev => prev + 1);
 
+        const contractType = getContractType(config.predictionType);
+
         api.send(JSON.stringify({
             buy: "1",
             price: stake,
             parameters: {
                 amount: stake,
                 basis: "stake",
-                contract_type: config.predictionType === 'matches' ? 'DIGITMATCH' : 'DIGITDIFF',
+                contract_type: contractType,
                 currency: "USD",
                 duration: config.ticks,
                 duration_unit: "t",
@@ -83,6 +103,8 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
     }, [api, totalProfit, stopBot, toast]);
 
     const handleMessage = useCallback((data: any) => {
+        if (!isRunningRef.current) return;
+
         if (data.msg_type === 'buy') {
             if (data.error) {
                 console.error("Buy error:", data.error.message);
@@ -91,7 +113,7 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
                 if (configRef.current?.useMartingale && currentStakeRef.current > configRef.current?.initialStake) {
                     currentStakeRef.current = configRef.current.initialStake;
                 }
-                setTimeout(purchaseContract, 1000); // Wait a bit before next trade
+                setTimeout(purchaseContract, 250); // Wait a bit before next trade
                 return;
             }
 
@@ -136,12 +158,12 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
             }
 
             // Delay before next purchase
-            setTimeout(purchaseContract, 1000);
+            setTimeout(purchaseContract, 250);
         }
     }, [purchaseContract, toast]);
 
     const startBot = useCallback((config: BotConfigurationValues) => {
-        if (isRunningRef.current) return;
+        if (isRunningRef.current || !api) return;
         
         configRef.current = config;
         currentStakeRef.current = config.initialStake;
@@ -154,9 +176,10 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         setTotalRuns(0);
         setTotalWins(0);
         setTotalLosses(0);
+        setBotStatus('running');
 
         // Subscribe to contract proposals
-        api?.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
+        api.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
         
         purchaseContract();
     }, [api, purchaseContract]);

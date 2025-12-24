@@ -29,12 +29,13 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const tradingBot = useTradingBot(ws.current);
 
   const connect = useCallback(async (apiToken: string) => {
-    if (ws.current) {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
         ws.current.close();
     }
 
     ws.current = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`);
     const socket = ws.current;
+    tradingBot.setApi(socket);
 
     return new Promise<void>((resolve, reject) => {
         socket.onopen = () => {
@@ -63,7 +64,6 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                     setAccountType(data.authorize.is_virtual ? 'demo' : 'real');
                     // Subscribe to balance updates
                     socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
-                    tradingBot.setApi(socket); // Set the API for the trading bot
                     resolve();
                 } else {
                     reject(new Error('Authorization failed.'));
@@ -82,31 +82,28 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
 
         socket.onclose = () => {
             setIsConnected(false);
-            setToken(null);
-            setBalance(null);
-            setAccountType(null);
-            tradingBot.setApi(null);
+            tradingBot.stopBot();
         };
         
         socket.onerror = (error) => {
             console.error('WebSocket error:', error);
             reject(new Error('WebSocket connection error.'));
             setIsConnected(false);
-            tradingBot.setApi(null);
         };
     });
   }, [tradingBot]);
 
   const disconnect = useCallback(() => {
+    tradingBot.stopBot();
     if (ws.current) {
       ws.current.close();
       ws.current = null;
     }
-    tradingBot.stopBot();
     setToken(null);
     setBalance(null);
     setIsConnected(false);
     setAccountType(null);
+    tradingBot.setApi(null);
   }, [tradingBot]);
 
   useEffect(() => {

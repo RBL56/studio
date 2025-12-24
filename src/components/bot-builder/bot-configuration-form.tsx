@@ -21,20 +21,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, RefreshCw, Square } from 'lucide-react';
+import { Loader2, Settings, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Switch } from '../ui/switch';
-import { Label } from '../ui/label';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { VOLATILITY_MARKETS } from '@/lib/constants';
 
 const botConfigurationSchema = z.object({
   market: z.string().min(1, 'Please select a market.'),
-  tradeType: z.string().min(1, 'Please select a trade type.'),
+  tradeType: z.enum(['matches_differs', 'even_odd', 'over_under']),
   ticks: z.coerce.number().int().min(1).max(10),
   lastDigitPrediction: z.coerce.number().int().min(0).max(9),
-  predictionType: z.enum(['matches', 'differs']),
+  predictionType: z.enum(['matches', 'differs', 'even', 'odd', 'over', 'under']),
   initialStake: z.coerce.number().min(0.35, 'Minimum stake is $0.35.'),
   takeProfit: z.coerce.number().optional(),
   stopLoss: z.coerce.number().optional(),
@@ -81,6 +80,28 @@ export function BotConfigurationForm() {
   };
 
   const useMartingale = form.watch('useMartingale');
+  const tradeType = form.watch('tradeType');
+  
+  const getPredictionTypes = () => {
+    switch(tradeType) {
+      case 'matches_differs':
+        return ['matches', 'differs'];
+      case 'even_odd':
+        return ['even', 'odd'];
+      case 'over_under':
+        return ['over', 'under'];
+      default:
+        return [];
+    }
+  }
+
+  const predictionTypes = getPredictionTypes();
+
+  // Reset predictionType if it's not valid for the new tradeType
+  if (!predictionTypes.includes(form.getValues('predictionType'))) {
+      form.setValue('predictionType', predictionTypes[0] as any);
+  }
+
 
   return (
     <Card>
@@ -133,7 +154,8 @@ export function BotConfigurationForm() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="matches_differs">Matches/Differs</SelectItem>
-                        {/* More trade types can be added here */}
+                        <SelectItem value="even_odd">Even/Odd</SelectItem>
+                        <SelectItem value="over_under">Over/Under</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -179,22 +201,18 @@ export function BotConfigurationForm() {
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="flex items-center gap-6"
                       disabled={isBotRunning}
                     >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="matches" />
-                        </FormControl>
-                        <FormLabel className="font-normal">Matches</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="differs" />
-                        </FormControl>
-                        <FormLabel className="font-normal">Differs</FormLabel>
-                      </FormItem>
+                      {predictionTypes.map(type => (
+                        <FormItem key={type} className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value={type} />
+                          </FormControl>
+                          <FormLabel className="font-normal capitalize">{type}</FormLabel>
+                        </FormItem>
+                      ))}
                     </RadioGroup>
                   </FormControl>
                   <FormMessage />
@@ -279,8 +297,7 @@ export function BotConfigurationForm() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
-            )}
+              )}
             
             <div className="pt-4">
                 <Button type="submit" size="lg" className="w-full" variant={isBotRunning ? "destructive" : "default"}>
