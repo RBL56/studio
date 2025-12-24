@@ -27,6 +27,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Switch } from '../ui/switch';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { VOLATILITY_MARKETS } from '@/lib/constants';
+import { useEffect } from 'react';
 
 const botConfigurationSchema = z.object({
   market: z.string().min(1, 'Please select a market.'),
@@ -82,8 +83,8 @@ export function BotConfigurationForm() {
   const useMartingale = form.watch('useMartingale');
   const tradeType = form.watch('tradeType');
   
-  const getPredictionTypes = () => {
-    switch(tradeType) {
+  const getPredictionTypes = (currentTradeType: string) => {
+    switch(currentTradeType) {
       case 'matches_differs':
         return ['matches', 'differs'];
       case 'even_odd':
@@ -95,12 +96,15 @@ export function BotConfigurationForm() {
     }
   }
 
-  const predictionTypes = getPredictionTypes();
-
-  // Reset predictionType if it's not valid for the new tradeType
-  if (!predictionTypes.includes(form.getValues('predictionType'))) {
-      form.setValue('predictionType', predictionTypes[0] as any);
-  }
+  const predictionTypes = getPredictionTypes(tradeType);
+  
+  useEffect(() => {
+    // Reset predictionType if it's not valid for the new tradeType
+    const currentPredictionType = form.getValues('predictionType');
+    if (!predictionTypes.includes(currentPredictionType)) {
+        form.setValue('predictionType', predictionTypes[0] as any, { shouldValidate: true });
+    }
+  }, [tradeType, form, predictionTypes]);
 
 
   return (
