@@ -285,7 +285,7 @@ export function BotConfigurationForm() {
               )}
             />
             {useMartingale && (
-                <FormField
+              <FormField
                 control={form.control}
                 name="martingaleFactor"
                 render={({ field }) => (
@@ -297,7 +297,8 @@ export function BotConfigurationForm() {
                     <FormMessage />
                   </FormItem>
                 )}
-              )}
+              />
+            )}
             
             <div className="pt-4">
                 <Button type="submit" size="lg" className="w-full" variant={isBotRunning ? "destructive" : "default"}>
