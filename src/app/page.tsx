@@ -13,7 +13,6 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
 import { DigitAnalysisTool } from '@/components/bot-builder/digit-analysis-tool';
-import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -21,13 +20,13 @@ export default function BotBuilderPage() {
   const formMethods = useForm<BotConfigurationValues>({
     resolver: zodResolver(botConfigurationSchema),
     defaultValues: {
-      market: '1HZ10V',
+      market: '1HZ75V',
       tradeType: 'matches_differs',
-      ticks: 5,
-      lastDigitPrediction: 1,
+      ticks: 1,
+      lastDigitPrediction: 4,
       predictionType: 'differs',
-      initialStake: 1,
-      takeProfit: 20,
+      initialStake: 10,
+      takeProfit: 2,
       stopLoss: 10,
       useMartingale: true,
       martingaleFactor: 2,
@@ -39,13 +38,13 @@ export default function BotBuilderPage() {
   const botInterface = (
     <>
       {isConnected ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <FormProvider {...formMethods}>
               <BotConfigurationForm />
             </FormProvider>
           </div>
-          <div className="space-y-8">
+          <div className="space-y-8 mt-8 lg:mt-0">
             <BotStatus />
             <TradeLog />
           </div>
@@ -112,12 +111,11 @@ export default function BotBuilderPage() {
           </Card>
         </TabsContent>
         <TabsContent value="dcircle">
-          <BotProvider>
-            <FormProvider {...formMethods}>
-                <DigitAnalysisTool />
-                <StartTradingButton />
-            </FormProvider>
-          </BotProvider>
+            <BotProvider>
+                <FormProvider {...formMethods}>
+                    <DigitAnalysisTool />
+                </FormProvider>
+            </BotProvider>
         </TabsContent>
         <TabsContent value="tradingview">
           <Card>

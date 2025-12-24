@@ -336,9 +336,7 @@ export function BotConfigurationForm() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Stopping Bot...
                     </>
                   ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" /> Start Bot
-                    </>
+                    "Start Bot"
                   )}
                 </Button>
             </div>
