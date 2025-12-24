@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Bot, LogIn, LineChart } from 'lucide-react';
+import { BookOpen, Bot, LogIn } from 'lucide-react';
 import { ApiTokenDialog } from './api-token-dialog';
 import { useDerivApi } from '@/context/deriv-api-context';
 import {
@@ -49,13 +49,6 @@ export default function Header() {
             >
               <Bot className="h-4 w-4" />
               Bot Builder
-            </Link>
-            <Link
-              href="/analysis"
-              className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center gap-1"
-            >
-              <LineChart className="h-4 w-4" />
-              Analysis
             </Link>
             <Link
               href="/tutorials"
