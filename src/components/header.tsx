@@ -34,8 +34,6 @@ export default function Header() {
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
            <ApiTokenDialog />
-           <Button variant="secondary">Log In</Button>
-           <Button>Sign Up</Button>
         </div>
       </div>
     </header>
