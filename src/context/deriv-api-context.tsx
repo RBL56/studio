@@ -213,7 +213,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        if (isRunningRef.current) {
+        if (isRunningRef.current && !config?.useBulkTrading) {
             setTimeout(purchaseContract, 0);
         }
     }
