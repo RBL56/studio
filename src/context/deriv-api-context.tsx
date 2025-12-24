@@ -202,7 +202,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (isRunningRef.current) {
-            setTimeout(purchaseContract, 250);
+            setTimeout(purchaseContract, 0);
         }
     }
   }, [purchaseContract, stopBot, toast]);
@@ -296,7 +296,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const isBotRunning = botStatus === 'running';
+  const isBotRunning = botStatus === 'running' && isRunningRef.current;
 
   return (
     <DerivApiContext.Provider value={{
