@@ -15,6 +15,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from './ui/dialog';
+import { ThemeToggle } from './theme-toggle';
 
 // This is a sample App ID. You should replace it with your own App ID from your Deriv developer account.
 const DERIV_APP_ID = 1089;
@@ -59,6 +60,7 @@ export default function Header() {
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
+          <ThemeToggle />
           <ApiTokenDialog />
           {!isConnected && (
             <>
