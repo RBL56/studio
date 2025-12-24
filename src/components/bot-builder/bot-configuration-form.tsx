@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useFormContext } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,7 +30,7 @@ import { VOLATILITY_MARKETS } from '@/lib/constants';
 import { useEffect } from 'react';
 import { useBot } from '@/context/bot-context';
 
-const botConfigurationSchema = z.object({
+export const botConfigurationSchema = z.object({
   market: z.string().min(1, 'Please select a market.'),
   tradeType: z.enum(['matches_differs', 'even_odd', 'over_under']),
   ticks: z.coerce.number().int().min(1).max(10),
@@ -50,24 +50,7 @@ export type BotConfigurationValues = z.infer<typeof botConfigurationSchema>;
 export function BotConfigurationForm() {
   const { toast } = useToast();
   const { isBotRunning, startBot, stopBot } = useBot();
-
-  const form = useForm<BotConfigurationValues>({
-    resolver: zodResolver(botConfigurationSchema),
-    defaultValues: {
-      market: '1HZ10V',
-      tradeType: 'matches_differs',
-      ticks: 5,
-      lastDigitPrediction: 1,
-      predictionType: 'differs',
-      initialStake: 1,
-      takeProfit: 20,
-      stopLoss: 10,
-      useMartingale: true,
-      martingaleFactor: 2,
-      useBulkTrading: false,
-      bulkTradeCount: 5,
-    },
-  });
+  const form = useFormContext<BotConfigurationValues>();
 
   const onSubmit = async (data: BotConfigurationValues) => {
     if (isBotRunning) {

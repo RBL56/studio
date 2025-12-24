@@ -9,16 +9,40 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotStatus } from '@/components/bot-builder/bot-status';
 import { TradeLog } from '@/components/bot-builder/trade-log';
 import { BotProvider } from '@/context/bot-context';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
+import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
+
+  const formMethods = useForm<BotConfigurationValues>({
+    resolver: zodResolver(botConfigurationSchema),
+    defaultValues: {
+      market: '1HZ10V',
+      tradeType: 'matches_differs',
+      ticks: 5,
+      lastDigitPrediction: 1,
+      predictionType: 'differs',
+      initialStake: 1,
+      takeProfit: 20,
+      stopLoss: 10,
+      useMartingale: true,
+      martingaleFactor: 2,
+      useBulkTrading: false,
+      bulkTradeCount: 5,
+    },
+  });
 
   const botInterface = (
     <>
       {isConnected ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <BotConfigurationForm />
+            <FormProvider {...formMethods}>
+              <BotConfigurationForm />
+            </FormProvider>
           </div>
           <div className="space-y-8">
             <BotStatus />
@@ -46,7 +70,7 @@ export default function BotBuilderPage() {
     </>
   );
 
-  const renderTabContent = (title: string, icon: React.ReactNode, content: React.ReactNode) => (
+  const renderTabContent = (title: string, icon: React.ReactNode, content: React.ReactNode, showButton: boolean = false) => (
     <Card>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
@@ -56,9 +80,14 @@ export default function BotBuilderPage() {
       </CardHeader>
       <CardContent>
         {content}
+        {showButton && isConnected && (
+            <FormProvider {...formMethods}>
+                <StartTradingButton />
+            </FormProvider>
+        )}
       </CardContent>
     </Card>
-  )
+  );
 
   return (
     <div className="container py-8">
@@ -72,25 +101,23 @@ export default function BotBuilderPage() {
             <TabsTrigger value="tradingview" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
           </TabsList>
         </ScrollArea>
-        <TabsContent value="speedbot">
-          <BotProvider>
-            {botInterface}
-          </BotProvider>
-        </TabsContent>
-        <TabsContent value="signalbot">
-          <BotProvider>
-            {botInterface}
-          </BotProvider>
-        </TabsContent>
-        <TabsContent value="signalarena">
-          {renderTabContent("Signal Arena", <Trophy className="h-6 w-6" />, <p>Signal Arena content will be here.</p>)}
-        </TabsContent>
-        <TabsContent value="dcircle">
-          {renderTabContent("DCircle", <Circle className="h-6 w-6" />, <p>DCircle content will be here.</p>)}
-        </TabsContent>
-        <TabsContent value="tradingview">
-          {renderTabContent("TradingView", <CandlestickChart className="h-6 w-6" />, <p>TradingView integration will be here.</p>)}
-        </TabsContent>
+        <BotProvider>
+          <TabsContent value="speedbot">
+                {botInterface}
+          </TabsContent>
+          <TabsContent value="signalbot">
+                {botInterface}
+          </TabsContent>
+          <TabsContent value="signalarena">
+            {renderTabContent("Signal Arena", <Trophy className="h-6 w-6" />, <p>Signal Arena content will be here.</p>)}
+          </TabsContent>
+          <TabsContent value="dcircle">
+            {renderTabContent("DCircle", <Circle className="h-6 w-6" />, <p>Start trading using your bot configuration.</p>, true)}
+          </TabsContent>
+          <TabsContent value="tradingview">
+            {renderTabContent("TradingView", <CandlestickChart className="h-6 w-6" />, <p>Start trading using your bot configuration.</p>, true)}
+          </TabsContent>
+        </BotProvider>
       </Tabs>
     </div>
   );
