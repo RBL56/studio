@@ -1,11 +1,13 @@
 'use client';
 
-import { TradingForm } from '@/components/bot-builder/trading-form';
+import { BotConfigurationForm } from '@/components/bot-builder/bot-configuration-form';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { BotStatus } from '@/components/bot-builder/bot-status';
+import { TradeLog } from '@/components/bot-builder/trade-log';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -38,7 +40,15 @@ export default function BotBuilderPage() {
         </ScrollArea>
         <TabsContent value="speedbot">
           {isConnected ? (
-              <TradingForm />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                  <BotConfigurationForm />
+                </div>
+                <div className="space-y-8">
+                  <BotStatus />
+                  <TradeLog />
+                </div>
+              </div>
             ) : (
                 <Card className="h-full flex flex-col justify-center items-center text-center">
                     <CardHeader>
