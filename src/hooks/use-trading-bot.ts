@@ -41,9 +41,12 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         if (!isRunningRef.current) return;
         isRunningRef.current = false;
         setBotStatus('stopped');
-        // Unsubscribe from contract proposals
         if (api?.readyState === WebSocket.OPEN) {
-            api.send(JSON.stringify({ forget_all: 'proposal_open_contract' }));
+            try {
+                api.send(JSON.stringify({ forget_all: 'proposal_open_contract' }));
+            } catch (e) {
+                console.error("Error unsubscribing from contracts:", e);
+            }
         }
     }, [api]);
 
@@ -81,9 +84,7 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         }
     
         setBotStatus('running');
-        setTotalStake(prev => prev + stake);
-        setTotalRuns(prev => prev + 1);
-
+        
         const contractType = getContractType(config.predictionType);
 
         api.send(JSON.stringify({
@@ -103,20 +104,18 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
     }, [api, totalProfit, stopBot, toast]);
 
     const handleMessage = useCallback((data: any) => {
+        if (data.error) {
+            console.error("API Error:", data.error.message);
+            toast({ variant: "destructive", title: "API Error", description: data.error.message });
+            if (data.error.code === 'AuthorizationRequired') {
+                stopBot();
+            }
+            return;
+        }
+
         if (!isRunningRef.current) return;
 
         if (data.msg_type === 'buy') {
-            if (data.error) {
-                console.error("Buy error:", data.error.message);
-                toast({ variant: "destructive", title: "Trade Error", description: data.error.message });
-                // If buy fails, maybe stop the bot or retry
-                if (configRef.current?.useMartingale && currentStakeRef.current > configRef.current?.initialStake) {
-                    currentStakeRef.current = configRef.current.initialStake;
-                }
-                setTimeout(purchaseContract, 250); // Wait a bit before next trade
-                return;
-            }
-
             const newTrade: Trade = {
                 id: data.buy.contract_id.toString(),
                 description: data.buy.longcode,
@@ -126,6 +125,8 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
                 isWin: false,
             };
             setTrades(prev => [newTrade, ...prev]);
+            setTotalStake(prev => prev + newTrade.stake);
+            setTotalRuns(prev => prev + 1);
         }
 
         if (data.msg_type === 'proposal_open_contract') {
@@ -157,17 +158,18 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
                 }
             }
 
-            // Delay before next purchase
-            setTimeout(purchaseContract, 250);
+            // Delay before next purchase if still running
+            if (isRunningRef.current) {
+                setTimeout(purchaseContract, 250);
+            }
         }
-    }, [purchaseContract, toast]);
+    }, [purchaseContract, toast, stopBot]);
 
     const startBot = useCallback((config: BotConfigurationValues) => {
         if (isRunningRef.current || !api) return;
         
         configRef.current = config;
         currentStakeRef.current = config.initialStake;
-        isRunningRef.current = true;
         
         // Reset stats
         setTrades([]);
@@ -176,6 +178,8 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         setTotalRuns(0);
         setTotalWins(0);
         setTotalLosses(0);
+        
+        isRunningRef.current = true;
         setBotStatus('running');
 
         // Subscribe to contract proposals
@@ -183,6 +187,8 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         
         purchaseContract();
     }, [api, purchaseContract]);
+    
+    const isBotRunning = botStatus === 'running';
 
     return {
         trades,
@@ -192,7 +198,7 @@ export function useTradingBot(initialApi: WebSocket | null): TradingBot {
         totalRuns,
         totalWins,
         totalLosses,
-        isBotRunning: isRunningRef.current,
+        isBotRunning,
         startBot,
         stopBot,
         handleMessage,

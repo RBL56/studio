@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, RefreshCw } from 'lucide-react';
+import { Loader2, Settings, RefreshCw, Square } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Switch } from '../ui/switch';
@@ -96,15 +96,13 @@ export function BotConfigurationForm() {
     }
   }
 
-  const predictionTypes = getPredictionTypes(tradeType);
-  
   useEffect(() => {
-    // Reset predictionType if it's not valid for the new tradeType
+    const predictionTypes = getPredictionTypes(tradeType);
     const currentPredictionType = form.getValues('predictionType');
     if (!predictionTypes.includes(currentPredictionType)) {
         form.setValue('predictionType', predictionTypes[0] as any, { shouldValidate: true });
     }
-  }, [tradeType, form, predictionTypes]);
+  }, [tradeType, form]);
 
 
   return (
@@ -209,7 +207,7 @@ export function BotConfigurationForm() {
                       className="flex items-center gap-6"
                       disabled={isBotRunning}
                     >
-                      {predictionTypes.map(type => (
+                      {getPredictionTypes(form.watch('tradeType')).map(type => (
                         <FormItem key={type} className="flex items-center space-x-3 space-y-0">
                           <FormControl>
                             <RadioGroupItem value={type} />
