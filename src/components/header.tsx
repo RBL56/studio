@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Bot, KeyRound } from 'lucide-react';
+import { BookOpen, Bot } from 'lucide-react';
 import { ApiTokenDialog } from './api-token-dialog';
 
 export default function Header() {
@@ -34,6 +34,8 @@ export default function Header() {
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
            <ApiTokenDialog />
+           <Button variant="secondary">Log In</Button>
+           <Button>Sign Up</Button>
         </div>
       </div>
     </header>
