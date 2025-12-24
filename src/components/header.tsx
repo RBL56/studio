@@ -16,13 +16,16 @@ import {
   DialogFooter,
 } from './ui/dialog';
 
+// This is a sample App ID. You should replace it with your own App ID from your Deriv developer account.
+const DERIV_APP_ID = 1089;
+
 export default function Header() {
   const { isConnected } = useDerivApi();
 
   const handleLoginRedirect = () => {
-    // In a real scenario, this would redirect to Deriv's OAuth page.
-    // For now, we just close the dialog.
-    console.log('Redirecting to Deriv for login...');
+    const redirectUri = window.location.origin;
+    const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&redirect_uri=${redirectUri}`;
+    window.location.href = derivAuthUrl;
   };
 
   return (
