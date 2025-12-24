@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { AppScripts } from './app-scripts';
 import Header from '@/components/header';
 
 
@@ -53,7 +52,6 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
         </div>
         <Toaster />
-        <AppScripts />
       </body>
     </html>
   );
