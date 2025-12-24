@@ -13,6 +13,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
+import { DigitStats } from '@/components/bot-builder/digit-stats';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -70,25 +71,6 @@ export default function BotBuilderPage() {
     </>
   );
 
-  const renderTabContent = (title: string, icon: React.ReactNode, content: React.ReactNode, showButton: boolean = false) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2">
-          {icon}
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {content}
-        {showButton && isConnected && (
-            <FormProvider {...formMethods}>
-                <StartTradingButton />
-            </FormProvider>
-        )}
-      </CardContent>
-    </Card>
-  );
-
   return (
     <div className="container py-8">
       <Tabs defaultValue="speedbot" className="w-full">
@@ -103,19 +85,39 @@ export default function BotBuilderPage() {
         </ScrollArea>
         <BotProvider>
           <TabsContent value="speedbot">
+            <FormProvider {...formMethods}>
                 {botInterface}
+            </FormProvider>
           </TabsContent>
           <TabsContent value="signalbot">
+            <FormProvider {...formMethods}>
+              <BotProvider>
                 {botInterface}
+              </BotProvider>
+            </FormProvider>
           </TabsContent>
           <TabsContent value="signalarena">
-            {renderTabContent("Signal Arena", <Trophy className="h-6 w-6" />, <p>Signal Arena content will be here.</p>)}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <Trophy className="h-6 w-6" />
+                  Signal Arena
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p>Signal Arena content will be here.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="dcircle">
-            {renderTabContent("DCircle", <Circle className="h-6 w-6" />, <p>Start trading using your bot configuration.</p>, true)}
+            <FormProvider {...formMethods}>
+              <DigitStats />
+            </FormProvider>
           </TabsContent>
           <TabsContent value="tradingview">
-            {renderTabContent("TradingView", <CandlestickChart className="h-6 w-6" />, <p>Start trading using your bot configuration.</p>, true)}
+            <FormProvider {...formMethods}>
+              <DigitStats />
+            </FormProvider>
           </TabsContent>
         </BotProvider>
       </Tabs>
