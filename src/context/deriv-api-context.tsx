@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 
 interface DerivApiContextType {
   isConnected: boolean;
@@ -12,46 +12,89 @@ interface DerivApiContextType {
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
 
-// Mock function to simulate API call for balance
-const fetchBalance = async (token: string): Promise<number> => {
-    console.log('Fetching balance for token:', token);
-    // In a real app, you would make an API call to Deriv
-    // This is a mock validation. Any non-empty token is "valid".
-    if (!token) {
-        throw new Error('Invalid token');
-    }
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Return a mock balance
-    return 10000.00;
-};
-
+const APP_ID = 1089; // Default Deriv App ID
 
 export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const ws = useRef<WebSocket | null>(null);
 
   const connect = useCallback(async (apiToken: string) => {
-    try {
-      const userBalance = await fetchBalance(apiToken);
-      setToken(apiToken);
-      setBalance(userBalance);
-      setIsConnected(true);
-    } catch (error) {
-      console.error('Failed to connect to Deriv API:', error);
-      // Ensure state is reset on failure
-      setToken(null);
-      setBalance(null);
-      setIsConnected(false);
-      throw error; // Re-throw to be caught in the component
+    if (ws.current) {
+        ws.current.close();
     }
+
+    ws.current = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`);
+    const socket = ws.current;
+
+    return new Promise<void>((resolve, reject) => {
+        socket.onopen = () => {
+            socket.send(JSON.stringify({ authorize: apiToken }));
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.error) {
+                console.error('Deriv API error:', data.error.message);
+                socket.close();
+                setToken(null);
+                setBalance(null);
+                setIsConnected(false);
+                reject(new Error(data.error.message));
+                return;
+            }
+
+            if (data.msg_type === 'authorize') {
+                if (data.authorize) {
+                    setToken(apiToken);
+                    setIsConnected(true);
+                    setBalance(data.authorize.balance);
+                    // Subscribe to balance updates
+                    socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+                    resolve();
+                } else {
+                    reject(new Error('Authorization failed.'));
+                }
+            }
+            
+            if (data.msg_type === 'balance') {
+                setBalance(data.balance.balance);
+            }
+        };
+
+        socket.onclose = () => {
+            setIsConnected(false);
+            setToken(null);
+            setBalance(null);
+        };
+        
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            reject(new Error('WebSocket connection error.'));
+            setIsConnected(false);
+        };
+    });
   }, []);
 
   const disconnect = useCallback(() => {
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
     setToken(null);
     setBalance(null);
     setIsConnected(false);
+  }, []);
+
+  useEffect(() => {
+    // Cleanup WebSocket on component unmount
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
   }, []);
 
   return (
