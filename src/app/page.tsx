@@ -7,9 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BotStatus } from '@/components/bot-builder/bot-status';
-import { TradeLog } from '@/components/bot-builder/trade-log';
-import { BotProvider, useBot } from '@/context/bot-context';
+import { BotProvider } from '@/context/bot-context';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
@@ -38,8 +36,8 @@ export default function BotBuilderPage() {
   });
 
   const tradingInterface = (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-8">
+    <div className="grid grid-cols-1">
+      <div className="space-y-8">
         <Tabs defaultValue="speedbot" className="w-full">
           <ScrollArea className="w-full whitespace-nowrap pb-4">
             <TabsList className="grid w-full grid-cols-5 mb-6 min-w-[600px]">
@@ -98,10 +96,6 @@ export default function BotBuilderPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-      <div className="space-y-8 mt-8 lg:mt-0">
-        <BotStatus />
-        <TradeLog />
       </div>
     </div>
   );
