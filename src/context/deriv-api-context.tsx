@@ -59,6 +59,12 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     totalProfitRef.current = totalProfit;
   }, [totalProfit]);
   
+  const stopBot = useCallback(() => {
+    if (!isRunningRef.current) return;
+    isRunningRef.current = false;
+    setBotStatus('stopped');
+  }, []);
+
   const resetStats = useCallback(() => {
     if (isRunningRef.current) {
       toast({
@@ -80,12 +86,6 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
         description: 'The trade log and statistics have been cleared.',
     });
   }, [toast]);
-
-  const stopBot = useCallback(() => {
-    if (!isRunningRef.current) return;
-    isRunningRef.current = false;
-    setBotStatus('stopped');
-  }, []);
 
   const getContractType = (predictionType: BotConfigurationValues['predictionType']) => {
     switch (predictionType) {
@@ -280,7 +280,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     if (config.useBulkTrading) {
       const tradeCount = config.bulkTradeCount || 1;
       for (let i = 0; i < tradeCount; i++) {
-        setTimeout(() => purchaseContract(), i * 50); // Stagger parallel trades slightly
+        purchaseContract();
       }
     } else {
       purchaseContract();
