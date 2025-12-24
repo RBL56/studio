@@ -54,11 +54,11 @@ export function ApiTokenDialog() {
     }
   };
 
-  const handleDisconnect = () => {
+  const handleLogout = () => {
     disconnect();
     toast({
-        title: "Disconnected",
-        description: "Your API token has been removed.",
+        title: "Logged Out",
+        description: "You have been disconnected from your Deriv account.",
     });
   }
 
@@ -66,9 +66,9 @@ export function ApiTokenDialog() {
     return (
         <div className="flex items-center gap-4">
             <BalanceDisplay />
-            <Button variant="destructive" size="sm" onClick={handleDisconnect}>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Disconnect
+                Logout
             </Button>
         </div>
     )

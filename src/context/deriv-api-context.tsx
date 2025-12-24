@@ -6,6 +6,7 @@ interface DerivApiContextType {
   isConnected: boolean;
   token: string | null;
   balance: number | null;
+  accountType: 'real' | 'demo' | null;
   connect: (token: string) => Promise<void>;
   disconnect: () => void;
 }
@@ -18,6 +19,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [accountType, setAccountType] = useState<'real' | 'demo' | null>(null);
   const ws = useRef<WebSocket | null>(null);
 
   const connect = useCallback(async (apiToken: string) => {
@@ -42,6 +44,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                 setToken(null);
                 setBalance(null);
                 setIsConnected(false);
+                setAccountType(null);
                 reject(new Error(data.error.message));
                 return;
             }
@@ -51,6 +54,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                     setToken(apiToken);
                     setIsConnected(true);
                     setBalance(data.authorize.balance);
+                    setAccountType(data.authorize.is_virtual ? 'demo' : 'real');
                     // Subscribe to balance updates
                     socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
                     resolve();
@@ -68,6 +72,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
             setIsConnected(false);
             setToken(null);
             setBalance(null);
+            setAccountType(null);
         };
         
         socket.onerror = (error) => {
@@ -86,6 +91,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     setBalance(null);
     setIsConnected(false);
+    setAccountType(null);
   }, []);
 
   useEffect(() => {
@@ -98,7 +104,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <DerivApiContext.Provider value={{ isConnected, token, balance, connect, disconnect }}>
+    <DerivApiContext.Provider value={{ isConnected, token, balance, accountType, connect, disconnect }}>
       {children}
     </DerivApiContext.Provider>
   );

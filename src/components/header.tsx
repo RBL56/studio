@@ -1,10 +1,15 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Bot, LogIn } from 'lucide-react';
 import { ApiTokenDialog } from './api-token-dialog';
+import { useDerivApi } from '@/context/deriv-api-context';
 
 export default function Header() {
+  const { isConnected } = useDerivApi();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
@@ -34,11 +39,15 @@ export default function Header() {
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
            <ApiTokenDialog />
-           <Button variant="ghost">
-              <LogIn className="mr-2 h-4 w-4" />
-              Log In
-            </Button>
-            <Button>Sign Up</Button>
+           {!isConnected && (
+            <>
+              <Button variant="ghost">
+                <LogIn className="mr-2 h-4 w-4" />
+                Log In
+              </Button>
+              <Button>Sign Up</Button>
+            </>
+           )}
         </div>
       </div>
     </header>
