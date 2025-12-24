@@ -153,7 +153,7 @@ export function DigitStats() {
                             <Skeleton className="h-12 w-48 mx-auto" />
                         ) : (
                             <p className={cn("text-5xl font-bold font-mono tracking-tighter", priceColor)}>
-                                {currentPrice.toFixed(3)}
+                                {currentPrice.toFixed(4)}
                             </p>
                         )}
                     </div>
