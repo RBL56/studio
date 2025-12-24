@@ -12,6 +12,7 @@ import { BotProvider } from '@/context/bot-context';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
+import { DigitStats } from '@/components/bot-builder/digit-stats';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -110,17 +111,11 @@ export default function BotBuilderPage() {
           </Card>
         </TabsContent>
         <TabsContent value="dcircle">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                  <Circle className="h-6 w-6" />
-                  DCircle
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>DCircle content will be here.</p>
-              </CardContent>
-            </Card>
+          <BotProvider>
+            <FormProvider {...formMethods}>
+              <DigitStats />
+            </FormProvider>
+          </BotProvider>
         </TabsContent>
         <TabsContent value="tradingview">
             <Card>
