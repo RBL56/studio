@@ -4,17 +4,105 @@
 import { BotConfigurationForm } from '@/components/bot-builder/bot-configuration-form';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart } from 'lucide-react';
+import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart, Play, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotStatus } from '@/components/bot-builder/bot-status';
 import { TradeLog } from '@/components/bot-builder/trade-log';
-import { BotProvider } from '@/context/bot-context';
+import { BotProvider, useBot } from '@/context/bot-context';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
 import { DigitAnalysisTool } from '@/components/bot-builder/digit-analysis-tool';
 import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+
+function TradingViewTabContent() {
+    const { isBotRunning, startBot, stopBot } = useBot();
+    const { toast } = useToast();
+    const form = useFormContext<BotConfigurationValues>();
+    const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+
+    const handleToggleBot = () => {
+        if (isBotRunning) {
+            stopBot();
+            toast({
+                title: 'Bot Stopped',
+                description: 'The trading bot has been stopped.',
+            });
+            setIsStatusDialogOpen(false);
+        } else {
+            form.handleSubmit((data) => {
+                startBot(data);
+                toast({
+                    title: 'Bot Started',
+                    description: 'The bot has started with your configuration.',
+                });
+                setIsStatusDialogOpen(true);
+            }, (errors) => {
+                console.error("Form validation failed", errors);
+                toast({
+                    variant: "destructive",
+                    title: 'Invalid Configuration',
+                    description: 'Please check your bot configuration and try again.',
+                });
+            })();
+        }
+    };
+    
+    return (
+        <>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline flex items-center gap-2">
+                    <CandlestickChart className="h-6 w-6" />
+                    TradingView Chart
+                    </CardTitle>
+                    <CardDescription>
+                    Live chart from deriv.com for your analysis.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="aspect-video w-full rounded-md overflow-hidden border">
+                        <iframe
+                            src="https://charts.deriv.com"
+                            className="w-full h-full"
+                            title="Deriv TradingView Chart"
+                        />
+                    </div>
+                     <div className="mt-4">
+                        <Button onClick={handleToggleBot} size="lg" className="w-full" variant={isBotRunning ? 'destructive' : 'default'}>
+                            {isBotRunning ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Stopping Bot...
+                            </>
+                            ) : (
+                            <>
+                                <Play className="mr-2 h-4 w-4" /> Start Trading
+                            </>
+                            )}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+            <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+                <DialogContent className="max-w-3xl grid-rows-[auto_1fr] gap-0 p-0">
+                    <DialogHeader className="p-6 pb-2">
+                        <DialogTitle className="font-headline">Live Bot Status</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 overflow-y-auto">
+                        <BotStatus />
+                        <TradeLog />
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
+
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -75,27 +163,7 @@ export default function BotBuilderPage() {
               <StartTradingButton />
           </TabsContent>
           <TabsContent value="tradingview">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                  <CandlestickChart className="h-6 w-6" />
-                  TradingView Chart
-                </CardTitle>
-                 <CardDescription>
-                  Live chart from deriv.com for your analysis.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="aspect-video w-full rounded-md overflow-hidden border">
-                    <iframe
-                        src="https://charts.deriv.com"
-                        className="w-full h-full"
-                        title="Deriv TradingView Chart"
-                    />
-                </div>
-                <StartTradingButton />
-              </CardContent>
-            </Card>
+            <TradingViewTabContent />
           </TabsContent>
         </Tabs>
       </div>
