@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, RefreshCw, Square } from 'lucide-react';
+import { Loader2, Settings, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Switch } from '../ui/switch';
@@ -40,6 +41,8 @@ const botConfigurationSchema = z.object({
   stopLoss: z.coerce.number().optional(),
   useMartingale: z.boolean().default(false),
   martingaleFactor: z.coerce.number().min(1, "Factor must be at least 1.").optional(),
+  useBulkTrading: z.boolean().default(false),
+  bulkTradeCount: z.coerce.number().int().min(1, "Must be at least 1 trade.").optional(),
 });
 
 export type BotConfigurationValues = z.infer<typeof botConfigurationSchema>;
@@ -61,6 +64,8 @@ export function BotConfigurationForm() {
       stopLoss: 10,
       useMartingale: true,
       martingaleFactor: 2,
+      useBulkTrading: false,
+      bulkTradeCount: 5,
     },
   });
 
@@ -81,6 +86,7 @@ export function BotConfigurationForm() {
   };
 
   const useMartingale = form.watch('useMartingale');
+  const useBulkTrading = form.watch('useBulkTrading');
   const tradeType = form.watch('tradeType');
   
   const getPredictionTypes = (currentTradeType: string) => {
@@ -272,9 +278,9 @@ export function BotConfigurationForm() {
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">Martingale</FormLabel>
-                    <CardDescription>
+                    <FormDescription>
                       Automatically increase stake after a loss.
-                    </CardDescription>
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -302,6 +308,44 @@ export function BotConfigurationForm() {
               />
             )}
             
+            <FormField
+              control={form.control}
+              name="useBulkTrading"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Bulk Trading</FormLabel>
+                    <FormDescription>
+                      Run a specific number of trades in parallel.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isBotRunning}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {useBulkTrading && (
+              <FormField
+                control={form.control}
+                name="bulkTradeCount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Number of Trades</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} value={field.value ?? ''} disabled={isBotRunning} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <div className="pt-4">
                 <Button type="submit" size="lg" className="w-full" variant={isBotRunning ? "destructive" : "default"}>
                   {isBotRunning ? (

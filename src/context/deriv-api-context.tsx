@@ -52,6 +52,8 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const isRunningRef = useRef(false);
   const { toast } = useToast();
   const totalProfitRef = useRef(0);
+  const bulkTradesCompletedRef = useRef(0);
+
 
   useEffect(() => {
     totalProfitRef.current = totalProfit;
@@ -72,6 +74,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     setTotalRuns(0);
     setTotalWins(0);
     setTotalLosses(0);
+    bulkTradesCompletedRef.current = 0;
     toast({
         title: 'Stats Reset',
         description: 'The trade log and statistics have been cleared.',
@@ -200,6 +203,15 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
             stopBot();
             return;
         }
+        
+        if (config?.useBulkTrading) {
+          bulkTradesCompletedRef.current += 1;
+          if (bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
+            toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
+            stopBot();
+            return;
+          }
+        }
 
         if (isRunningRef.current) {
             setTimeout(purchaseContract, 0);
@@ -265,7 +277,14 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
     isRunningRef.current = true;
     setBotStatus('running');
     
-    purchaseContract();
+    if (config.useBulkTrading) {
+      const tradeCount = config.bulkTradeCount || 1;
+      for (let i = 0; i < tradeCount; i++) {
+        setTimeout(() => purchaseContract(), i * 50); // Stagger parallel trades slightly
+      }
+    } else {
+      purchaseContract();
+    }
   }, [purchaseContract, resetStats]);
 
   const disconnect = useCallback(() => {
