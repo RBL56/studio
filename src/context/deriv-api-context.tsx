@@ -1,9 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
-import type { BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
-import type { Trade } from '@/lib/types';
-import { useTradingBot, type TradingBot } from '@/hooks/use-trading-bot';
+import type { TradingBot } from '@/hooks/use-trading-bot';
+import { useTradingBot } from '@/hooks/use-trading-bot';
 
 interface DerivApiContextType extends TradingBot {
   isConnected: boolean;
@@ -47,39 +46,31 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
 
             if (data.error) {
                 console.error('Deriv API error:', data.error.message);
-                // Don't reject on subscription errors if already authorized
-                if (data.error.code === 'AlreadySubscribed') {
-                  return;
+                if (data.error.code !== 'AlreadySubscribed') {
+                  socket.close();
+                  setToken(null);
+                  setBalance(null);
+                  setIsConnected(false);
+                  setAccountType(null);
+                  reject(new Error(data.error.message));
                 }
-                socket.close();
-                setToken(null);
-                setBalance(null);
-                setIsConnected(false);
-                setAccountType(null);
-                reject(new Error(data.error.message));
-                return;
-            }
-
-            if (data.msg_type === 'authorize') {
+            } else if (data.msg_type === 'authorize') {
                 if (data.authorize) {
                     setToken(apiToken);
                     setIsConnected(true);
                     setBalance(data.authorize.balance);
                     setAccountType(data.authorize.is_virtual ? 'demo' : 'real');
-                    // Subscribe to balance and open contract updates
                     socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
                     socket.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                     resolve();
                 } else {
                     reject(new Error('Authorization failed.'));
                 }
-            }
-            
-            if (data.msg_type === 'balance') {
+            } else if (data.msg_type === 'balance') {
                 setBalance(data.balance.balance);
             }
-
-            // Forward messages to the trading bot
+            
+            // Forward all messages to the trading bot
             if (tradingBot.handleMessage) {
                 tradingBot.handleMessage(data);
             }
