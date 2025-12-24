@@ -1,13 +1,13 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDerivApi } from '@/context/deriv-api-context';
 import { CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import { useBot } from '@/context/bot-context';
 
 export function TradeLog() {
-  const { trades, totalProfit, totalWins, totalLosses } = useDerivApi();
+  const { trades, totalProfit, totalWins, totalLosses } = useBot();
   
   return (
     <Card>

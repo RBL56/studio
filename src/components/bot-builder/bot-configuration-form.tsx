@@ -26,9 +26,9 @@ import { Loader2, Settings, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Switch } from '../ui/switch';
-import { useDerivApi } from '@/context/deriv-api-context';
 import { VOLATILITY_MARKETS } from '@/lib/constants';
 import { useEffect } from 'react';
+import { useBot } from '@/context/bot-context';
 
 const botConfigurationSchema = z.object({
   market: z.string().min(1, 'Please select a market.'),
@@ -49,7 +49,7 @@ export type BotConfigurationValues = z.infer<typeof botConfigurationSchema>;
 
 export function BotConfigurationForm() {
   const { toast } = useToast();
-  const { isBotRunning, startBot, stopBot } = useDerivApi();
+  const { isBotRunning, startBot, stopBot } = useBot();
 
   const form = useForm<BotConfigurationValues>({
     resolver: zodResolver(botConfigurationSchema),

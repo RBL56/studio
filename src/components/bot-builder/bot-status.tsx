@@ -1,12 +1,12 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useDerivApi } from '@/context/deriv-api-context';
 import { Loader2, PlayCircle, Square, CircleDollarSign, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useBot } from '@/context/bot-context';
 
 export function BotStatus() {
-  const { botStatus, totalProfit, totalRuns, totalStake, resetStats, isBotRunning } = useDerivApi();
+  const { botStatus, totalProfit, totalRuns, totalStake, resetStats, isBotRunning } = useBot();
 
   const getStatusContent = () => {
     switch (botStatus) {

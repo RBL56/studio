@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotStatus } from '@/components/bot-builder/bot-status';
 import { TradeLog } from '@/components/bot-builder/trade-log';
+import { BotProvider } from '@/context/bot-context';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -72,10 +73,14 @@ export default function BotBuilderPage() {
           </TabsList>
         </ScrollArea>
         <TabsContent value="speedbot">
-          {botInterface}
+          <BotProvider>
+            {botInterface}
+          </BotProvider>
         </TabsContent>
         <TabsContent value="signalbot">
-          {botInterface}
+          <BotProvider>
+            {botInterface}
+          </BotProvider>
         </TabsContent>
         <TabsContent value="signalarena">
           {renderTabContent("Signal Arena", <Trophy className="h-6 w-6" />, <p>Signal Arena content will be here.</p>)}
