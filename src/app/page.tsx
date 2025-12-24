@@ -1,9 +1,10 @@
+
 'use client';
 
 import { BotConfigurationForm } from '@/components/bot-builder/bot-configuration-form';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart } from 'lucide-react';
+import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart, ExternalLink } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotStatus } from '@/components/bot-builder/bot-status';
@@ -81,7 +82,9 @@ export default function BotBuilderPage() {
             <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
             <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
             <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
-            <TabsTrigger value="tradingview" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
+            <a href="https://charts.deriv.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground py-3 text-base">
+              <CandlestickChart className="mr-2 h-5 w-5" />TradingView <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
           </TabsList>
         </ScrollArea>
         
@@ -129,9 +132,12 @@ export default function BotBuilderPage() {
                     <CandlestickChart className="h-6 w-6" />
                     TradingView
                   </CardTitle>
+                   <CardDescription>
+                    The "TradingView" tab now opens Deriv's advanced charting platform in a new window.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p>TradingView content will be here.</p>
+                  <p>You can use the charts for your analysis and return here to execute trades with the bot.</p>
                   <Separator className="my-4" />
                   <StartTradingButton />
                 </CardContent>
