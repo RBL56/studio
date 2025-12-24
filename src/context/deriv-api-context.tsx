@@ -50,6 +50,11 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const currentStakeRef = useRef<number>(0);
   const isRunningRef = useRef(false);
   const { toast } = useToast();
+  const totalProfitRef = useRef(0);
+
+  useEffect(() => {
+    totalProfitRef.current = totalProfit;
+  }, [totalProfit]);
 
   const stopBot = useCallback(() => {
     if (!isRunningRef.current) return;
@@ -77,19 +82,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
 
     const config = configRef.current;
     const stake = currentStakeRef.current;
-
-    if (config.stopLoss && totalProfit <= -config.stopLoss) {
-      toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss limit." });
-      stopBot();
-      return;
-    }
-
-    if (config.takeProfit && totalProfit >= config.takeProfit) {
-      toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
-      stopBot();
-      return;
-    }
-
+    
     setBotStatus('running');
 
     const contractType = getContractType(config.predictionType);
@@ -108,7 +101,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
         barrier: config.lastDigitPrediction,
       }
     }));
-  }, [stopBot, toast, totalProfit]);
+  }, [stopBot]);
 
   const handleMessage = useCallback((data: any) => {
     if (data.error) {
@@ -152,6 +145,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
 
         const isWin = contract.status === 'won';
         const profit = contract.profit;
+        const newTotalProfit = totalProfitRef.current + profit;
 
         setTrades(prev => prev.map(t => t.id === contract.contract_id.toString() ? {
             ...t,
@@ -159,7 +153,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
             isWin,
         } : t));
 
-        setTotalProfit(prev => prev + profit);
+        setTotalProfit(newTotalProfit);
 
         if (isWin) {
             setTotalWins(prev => prev + 1);
@@ -171,6 +165,19 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
             if (configRef.current?.useMartingale) {
                 currentStakeRef.current *= (configRef.current.martingaleFactor || 2);
             }
+        }
+
+        const config = configRef.current;
+        if (config?.takeProfit && newTotalProfit >= config.takeProfit) {
+            toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
+            stopBot();
+            return;
+        }
+
+        if (config?.stopLoss && newTotalProfit <= -config.stopLoss) {
+            toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss limit." });
+            stopBot();
+            return;
         }
 
         if (isRunningRef.current) {
