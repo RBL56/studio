@@ -31,8 +31,11 @@ export default function Header() {
         <div className="mr-4 flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Image src="/deriv-logo.svg" alt="Deriv Logo" width={32} height={32} />
-            <span className="font-bold font-headline sm:inline-block">
+            <span className="font-bold font-headline sm:inline-block hidden">
               Deriv Trading Bot
+            </span>
+            <span className="font-bold font-headline sm:hidden">
+              Deriv Bot
             </span>
           </Link>
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
