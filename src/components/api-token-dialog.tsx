@@ -13,25 +13,38 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { KeyRound, LogOut, CheckCircle } from "lucide-react";
+import { KeyRound, LogOut, Loader2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
+import { useDerivApi } from '@/context/deriv-api-context';
+import { BalanceDisplay } from './balance-display';
 
 export function ApiTokenDialog() {
   const [isOpen, setIsOpen] = useState(false);
-  const [token, setToken] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
+  const { isConnected, connect, disconnect } = useDerivApi();
 
-  const handleConnect = () => {
-    if (token) {
-      // In a real app, you'd validate the token with the Deriv API
-      console.log('Connecting with token:', token);
-      setIsConnected(true);
-      setIsOpen(false);
-      toast({
-        title: "Successfully Connected",
-        description: "Your Deriv API token has been saved.",
-      });
+  const handleConnect = async () => {
+    if (tokenInput) {
+      setIsConnecting(true);
+      try {
+        await connect(tokenInput);
+        setIsOpen(false);
+        toast({
+          title: "Successfully Connected",
+          description: "Your Deriv API token has been authenticated.",
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Connection Failed",
+          description: "The API token is invalid. Please check and try again.",
+        });
+      } finally {
+        setIsConnecting(false);
+        setTokenInput('');
+      }
     } else {
         toast({
             variant: "destructive",
@@ -42,8 +55,7 @@ export function ApiTokenDialog() {
   };
 
   const handleDisconnect = () => {
-    setToken('');
-    setIsConnected(false);
+    disconnect();
     toast({
         title: "Disconnected",
         description: "Your API token has been removed.",
@@ -53,10 +65,7 @@ export function ApiTokenDialog() {
   if (isConnected) {
     return (
         <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2 text-sm text-green-600">
-                <CheckCircle className="h-5 w-5" />
-                <span>API Connected</span>
-            </div>
+            <BalanceDisplay />
             <Button variant="destructive" size="sm" onClick={handleDisconnect}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Disconnect
@@ -86,15 +95,19 @@ export function ApiTokenDialog() {
             </Label>
             <Input
               id="token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
               placeholder="Your Deriv API Token"
               className="col-span-3"
+              disabled={isConnecting}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleConnect}>Connect</Button>
+          <Button onClick={handleConnect} disabled={isConnecting}>
+            {isConnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Connect
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
