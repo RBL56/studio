@@ -38,114 +38,98 @@ export default function BotBuilderPage() {
     },
   });
 
-  const botInterface = (
-    <>
-      {isConnected ? (
-        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <FormProvider {...formMethods}>
-              <BotConfigurationForm />
-            </FormProvider>
-          </div>
-          <div className="space-y-8 mt-8 lg:mt-0">
-            <BotStatus />
-            <TradeLog />
-          </div>
-        </div>
-      ) : (
-          <Card className="h-full flex flex-col justify-center items-center text-center">
+  const tradingInterface = (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 space-y-8">
+        <Tabs defaultValue="speedbot" className="w-full">
+          <ScrollArea className="w-full whitespace-nowrap pb-4">
+            <TabsList className="grid w-full grid-cols-5 mb-6 min-w-[600px]">
+              <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
+              <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
+              <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+              <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+              <a href="https://charts.deriv.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground py-3 text-base">
+                <CandlestickChart className="mr-2 h-5 w-5" />TradingView <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </TabsList>
+          </ScrollArea>
+          
+          <TabsContent value="speedbot">
+            <BotConfigurationForm />
+          </TabsContent>
+          <TabsContent value="signalbot">
+            <BotConfigurationForm />
+          </TabsContent>
+          <TabsContent value="signalarena">
+            <Card>
               <CardHeader>
-                  <div className="mx-auto bg-destructive/10 rounded-full p-3 w-fit mb-4">
-                      <ShieldAlert className="h-8 w-8 text-destructive" />
-                  </div>
-                  <CardTitle className="font-headline text-2xl">Connect Your Account</CardTitle>
-                  <CardDescription>
-                      Please connect your Deriv account using your API token to start trading.
-                  </CardDescription>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <Trophy className="h-6 w-6" />
+                  Signal Arena
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                      You can get your API token from your Deriv account settings. Click the "API Token" button in the header to get started.
-                  </p>
+                <p>Signal Arena content will be here.</p>
               </CardContent>
-          </Card>
-      )}
-    </>
+            </Card>
+          </TabsContent>
+          <TabsContent value="dcircle">
+              <DigitAnalysisTool />
+              <StartTradingButton />
+          </TabsContent>
+          <TabsContent value="tradingview">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <CandlestickChart className="h-6 w-6" />
+                  TradingView
+                </CardTitle>
+                 <CardDescription>
+                  This tab now opens Deriv's advanced charting platform in a new window for your analysis.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>You can use the charts for your analysis and return here to execute trades with the bot.</p>
+                <Separator className="my-4" />
+                <StartTradingButton />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+      <div className="space-y-8 mt-8 lg:mt-0">
+        <BotStatus />
+        <TradeLog />
+      </div>
+    </div>
   );
 
   return (
     <div className="container py-8">
-      <Tabs defaultValue="speedbot" className="w-full">
-        <ScrollArea className="w-full whitespace-nowrap pb-4">
-          <TabsList className="grid w-full grid-cols-5 mb-6 min-w-[600px]">
-            <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
-            <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
-            <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
-            <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
-            <a href="https://charts.deriv.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground py-3 text-base">
-              <CandlestickChart className="mr-2 h-5 w-5" />TradingView <ExternalLink className="ml-2 h-4 w-4" />
-            </a>
-          </TabsList>
-        </ScrollArea>
-        
-        <TabsContent value="speedbot">
-          <BotProvider>
-            <FormProvider {...formMethods}>
-                {botInterface}
-            </FormProvider>
-          </BotProvider>
-        </TabsContent>
-        <TabsContent value="signalbot">
-          <BotProvider>
-            <FormProvider {...formMethods}>
-              {botInterface}
-            </FormProvider>
-          </BotProvider>
-        </TabsContent>
-        <TabsContent value="signalarena">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2">
-                <Trophy className="h-6 w-6" />
-                Signal Arena
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Signal Arena content will be here.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="dcircle">
-            <BotProvider>
-                <FormProvider {...formMethods}>
-                    <DigitAnalysisTool />
-                    <StartTradingButton />
-                </FormProvider>
-            </BotProvider>
-        </TabsContent>
-        <TabsContent value="tradingview">
-          <BotProvider>
-            <FormProvider {...formMethods}>
-              <Card>
+      <BotProvider>
+        <FormProvider {...formMethods}>
+          {isConnected ? (
+            tradingInterface
+          ) : (
+            <Card className="h-full flex flex-col justify-center items-center text-center py-16">
                 <CardHeader>
-                  <CardTitle className="font-headline flex items-center gap-2">
-                    <CandlestickChart className="h-6 w-6" />
-                    TradingView
-                  </CardTitle>
-                   <CardDescription>
-                    The "TradingView" tab now opens Deriv's advanced charting platform in a new window.
-                  </CardDescription>
+                    <div className="mx-auto bg-destructive/10 rounded-full p-3 w-fit mb-4">
+                        <ShieldAlert className="h-8 w-8 text-destructive" />
+                    </div>
+                    <CardTitle className="font-headline text-2xl">Connect Your Account</CardTitle>
+                    <CardDescription>
+                        Please connect your Deriv account using your API token to start trading.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p>You can use the charts for your analysis and return here to execute trades with the bot.</p>
-                  <Separator className="my-4" />
-                  <StartTradingButton />
+                    <p className="text-sm text-muted-foreground">
+                        You can get your API token from your Deriv account settings. Click the "API Token" button in the header to get started.
+                    </p>
                 </CardContent>
-              </Card>
-            </FormProvider>
-          </BotProvider>
-        </TabsContent>
-      </Tabs>
+            </Card>
+          )}
+        </FormProvider>
+      </BotProvider>
     </div>
   );
 }
