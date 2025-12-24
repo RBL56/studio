@@ -29,6 +29,7 @@ import { Switch } from '../ui/switch';
 import { VOLATILITY_MARKETS } from '@/lib/constants';
 import { useEffect } from 'react';
 import { useBot } from '@/context/bot-context';
+import { StartTradingButton } from './start-trading-button';
 
 export const botConfigurationSchema = z.object({
   market: z.string().min(1, 'Please select a market.'),
@@ -330,15 +331,7 @@ export function BotConfigurationForm() {
             )}
 
             <div className="pt-4">
-                <Button type="submit" size="lg" className="w-full" variant={isBotRunning ? "destructive" : "default"}>
-                  {isBotRunning ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Stopping Bot...
-                    </>
-                  ) : (
-                    "Start Bot"
-                  )}
-                </Button>
+                <StartTradingButton />
             </div>
           </form>
         </Form>

@@ -26,6 +26,13 @@ export function StartTradingButton() {
           title: 'Bot Started',
           description: 'The bot has started with your configuration.',
         });
+      }, (errors) => {
+        console.error("Form validation failed", errors);
+        toast({
+          variant: "destructive",
+          title: 'Invalid Configuration',
+          description: 'Please check your bot configuration and try again.',
+        });
       })();
     }
   };

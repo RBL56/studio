@@ -13,6 +13,8 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
 import { DigitAnalysisTool } from '@/components/bot-builder/digit-analysis-tool';
+import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
+import { Separator } from '@/components/ui/separator';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -39,7 +41,7 @@ export default function BotBuilderPage() {
     <>
       {isConnected ? (
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             <FormProvider {...formMethods}>
               <BotConfigurationForm />
             </FormProvider>
@@ -114,21 +116,28 @@ export default function BotBuilderPage() {
             <BotProvider>
                 <FormProvider {...formMethods}>
                     <DigitAnalysisTool />
+                    <StartTradingButton />
                 </FormProvider>
             </BotProvider>
         </TabsContent>
         <TabsContent value="tradingview">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2">
-                <CandlestickChart className="h-6 w-6" />
-                TradingView
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>TradingView content will be here.</p>
-            </CardContent>
-          </Card>
+          <BotProvider>
+            <FormProvider {...formMethods}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline flex items-center gap-2">
+                    <CandlestickChart className="h-6 w-6" />
+                    TradingView
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>TradingView content will be here.</p>
+                  <Separator className="my-4" />
+                  <StartTradingButton />
+                </CardContent>
+              </Card>
+            </FormProvider>
+          </BotProvider>
         </TabsContent>
       </Tabs>
     </div>
