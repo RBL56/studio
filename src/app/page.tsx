@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { TradingForm } from '@/components/bot-builder/trading-form';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +27,7 @@ export default function BotBuilderPage() {
   return (
     <div className="container py-8">
       <Tabs defaultValue="speedbot" className="w-full">
-        <ScrollArea className="w-full whitespace-nowrap">
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
           <TabsList className="grid w-full grid-cols-5 mb-6 min-w-[600px]">
             <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
             <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
