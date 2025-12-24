@@ -28,11 +28,11 @@ export default function BotBuilderPage() {
     <div className="container py-8">
       <Tabs defaultValue="speedbot" className="w-full">
         <TabsList className="grid w-full grid-cols-5 mb-6">
-          <TabsTrigger value="speedbot"><Bot className="mr-2 h-4 w-4" />SpeedBot</TabsTrigger>
-          <TabsTrigger value="signalbot"><Signal className="mr-2 h-4 w-4" />Signal Bot</TabsTrigger>
-          <TabsTrigger value="signalarena"><Trophy className="mr-2 h-4 w-4" />Signal Arena</TabsTrigger>
-          <TabsTrigger value="dcircle"><Circle className="mr-2 h-4 w-4" />DCircle</TabsTrigger>
-          <TabsTrigger value="tradingview"><CandlestickChart className="mr-2 h-4 w-4" />TradingView</TabsTrigger>
+          <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
+          <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
+          <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+          <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+          <TabsTrigger value="tradingview" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
         </TabsList>
         <TabsContent value="speedbot">
           {isConnected ? (
