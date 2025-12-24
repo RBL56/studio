@@ -1,21 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import type { Strategy } from '@/lib/types';
 import { TradingForm } from '@/components/bot-builder/trading-form';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function BotBuilderPage() {
-  const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
   const { isConnected } = useDerivApi();
+
+  const renderTabContent = (title: string, icon: React.ReactNode, content: React.ReactNode) => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-headline flex items-center gap-2">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {content}
+      </CardContent>
+    </Card>
+  )
 
   return (
     <div className="container py-8">
-      <div className="grid lg:grid-cols-5 gap-8">
-        <div className="lg:col-span-3 space-y-8">
-            {isConnected ? (
+      <Tabs defaultValue="speedbot" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsTrigger value="speedbot"><Bot className="mr-2 h-4 w-4" />SpeedBot</TabsTrigger>
+          <TabsTrigger value="signalbot"><Signal className="mr-2 h-4 w-4" />Signal Bot</TabsTrigger>
+          <TabsTrigger value="signalarena"><Trophy className="mr-2 h-4 w-4" />Signal Arena</TabsTrigger>
+          <TabsTrigger value="dcircle"><Circle className="mr-2 h-4 w-4" />DCircle</TabsTrigger>
+          <TabsTrigger value="tradingview"><CandlestickChart className="mr-2 h-4 w-4" />TradingView</TabsTrigger>
+        </TabsList>
+        <TabsContent value="speedbot">
+          {isConnected ? (
               <TradingForm />
             ) : (
                 <Card className="h-full flex flex-col justify-center items-center text-center">
@@ -35,11 +55,20 @@ export default function BotBuilderPage() {
                     </CardContent>
                 </Card>
             )}
-        </div>
-        <div className="lg:col-span-2">
-          {/* Backtest results were previously here */}
-        </div>
-      </div>
+        </TabsContent>
+        <TabsContent value="signalbot">
+          {renderTabContent("Signal Bot", <Signal className="h-6 w-6" />, <p>Signal Bot content will be here.</p>)}
+        </TabsContent>
+        <TabsContent value="signalarena">
+          {renderTabContent("Signal Arena", <Trophy className="h-6 w-6" />, <p>Signal Arena content will be here.</p>)}
+        </TabsContent>
+        <TabsContent value="dcircle">
+          {renderTabContent("DCircle", <Circle className="h-6 w-6" />, <p>DCircle content will be here.</p>)}
+        </TabsContent>
+        <TabsContent value="tradingview">
+          {renderTabContent("TradingView", <CandlestickChart className="h-6 w-6" />, <p>TradingView integration will be here.</p>)}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
