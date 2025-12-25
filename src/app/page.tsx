@@ -17,10 +17,11 @@ export default function BotBuilderPage() {
     <div className="grid grid-cols-1 gap-8">
       <Tabs defaultValue="bot-builder" className="w-full" onValueChange={setActiveTab}>
         <ScrollArea className="w-full whitespace-nowrap pb-4">
-            <TabsList className="grid w-full grid-cols-3 mb-6 min-w-[400px]">
+            <TabsList className="grid w-full grid-cols-4 mb-6 min-w-[600px]">
                 <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
-                <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
                 <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+                <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
+                <TabsTrigger value="signal-arena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
             </TabsList>
         </ScrollArea>
         
@@ -41,6 +42,9 @@ export default function BotBuilderPage() {
             </Tabs>
         </TabsContent>
 
+        <TabsContent value="dcircle">
+        </TabsContent>
+
         <TabsContent value="trading-view">
             <div className="w-full rounded-md overflow-hidden border h-[70vh]">
                 <iframe
@@ -50,8 +54,9 @@ export default function BotBuilderPage() {
                 />
             </div>
         </TabsContent>
-        <TabsContent value="dcircle">
-            <Card>
+
+        <TabsContent value="signal-arena">
+             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline flex items-center gap-2">
                         <Trophy className="h-6 w-6" />
