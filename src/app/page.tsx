@@ -64,7 +64,7 @@ export default function BotBuilderPage() {
                     <QuickTradePanel />
                 </TabsContent>
 
-                <TabsContent value="trading-view" forceMount>
+                <TabsContent value="trading-view">
                     <div className="w-full rounded-md overflow-hidden border h-[70vh]">
                         <iframe
                             src="https://charts.deriv.com"
@@ -72,7 +72,6 @@ export default function BotBuilderPage() {
                             title="Deriv TradingView Chart"
                         />
                     </div>
-                    <QuickTradePanel />
                 </TabsContent>
                 
                 <TabsContent value="signal-arena">
