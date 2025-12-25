@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/header';
 import { DerivApiProvider } from '@/context/deriv-api-context';
 import { ThemeProvider } from '@/components/theme-provider';
+import { DigitAnalysisProvider } from '@/context/digit-analysis-context';
 
 
 export const metadata: Metadata = {
@@ -52,11 +53,13 @@ export default function RootLayout({
             storageKey="vite-ui-theme"
         >
           <DerivApiProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-            </div>
-            <Toaster />
+            <DigitAnalysisProvider>
+              <div className="relative flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+              </div>
+              <Toaster />
+            </DigitAnalysisProvider>
           </DerivApiProvider>
         </ThemeProvider>
       </body>
