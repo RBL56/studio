@@ -4,75 +4,80 @@
 import { useState } from 'react';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart } from 'lucide-react';
+import { ShieldAlert, Bot, Signal, Trophy, CandlestickChart, Circle, Waypoints } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotProvider } from '@/context/bot-context';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
-  const [activeTab, setActiveTab] = useState('speedbot');
+  const [activeTab, setActiveTab] = useState('bot-builder');
 
   const tradingInterface = (
     <div className="grid grid-cols-1 gap-8">
-      <div>
-        <Tabs defaultValue="speedbot" className="w-full" onValueChange={setActiveTab}>
-          <ScrollArea className="w-full whitespace-nowrap pb-4">
+      <Tabs defaultValue="bot-builder" className="w-full" onValueChange={setActiveTab}>
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
             <TabsList className="grid w-full grid-cols-3 mb-6 min-w-[400px]">
-              <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
-              <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
-              <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+                <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
+                <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
+                <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
             </TabsList>
-          </ScrollArea>
-          
-          <TabsContent value="speedbot">
-          </TabsContent>
-          <TabsContent value="signalbot">
-          </TabsContent>
-          <TabsContent value="signalarena">
+        </ScrollArea>
+        
+        <TabsContent value="bot-builder">
+            <Tabs defaultValue="speedbot" className="w-full">
+                <ScrollArea className="w-full whitespace-nowrap pb-4">
+                    <TabsList className="grid w-full grid-cols-3 mb-6 min-w-[400px]">
+                    <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
+                    <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
+                    <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+                    </TabsList>
+                </ScrollArea>
+                
+                <TabsContent value="speedbot">
+                </TabsContent>
+
+                <TabsContent value="signalbot">
+                </TabsContent>
+
+                <TabsContent value="signalarena">
+                    <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline flex items-center gap-2">
+                        <Trophy className="h-6 w-6" />
+                        Signal Arena
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>Signal Arena content will be here.</p>
+                    </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+        </TabsContent>
+
+        <TabsContent value="trading-view">
+            <div className="w-full rounded-md overflow-hidden border h-[70vh]">
+                <iframe
+                    src="https://charts.deriv.com"
+                    className="w-full h-full"
+                    title="Deriv TradingView Chart"
+                />
+            </div>
+        </TabsContent>
+        <TabsContent value="dcircle">
             <Card>
-              <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                  <Trophy className="h-6 w-6" />
-                  Signal Arena
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>Signal Arena content will be here.</p>
-              </CardContent>
+                <CardHeader>
+                    <CardTitle className="font-headline flex items-center gap-2">
+                        <Circle className="mr-2 h-5 w-5" />
+                        DCircle
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <Circle className="mr-2 h-5 w-5" />
-                    DCircle
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <CandlestickChart className="mr-2 h-5 w-5" />
-                    TradingView
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="w-full rounded-md overflow-hidden border h-[40vh]">
-                    <iframe
-                        src="https://charts.deriv.com"
-                        className="w-full h-full"
-                        title="Deriv TradingView Chart"
-                    />
-                </div>
-            </CardContent>
-        </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 
