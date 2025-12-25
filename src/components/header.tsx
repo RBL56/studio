@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -17,8 +18,7 @@ import {
 } from './ui/dialog';
 import { ThemeToggle } from './theme-toggle';
 
-// This is a sample App ID. You should replace it with your own App ID from your Deriv developer account.
-const DERIV_APP_ID = 1089;
+const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID || 1089;
 
 export default function Header() {
   const { isConnected } = useDerivApi();

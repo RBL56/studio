@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
@@ -16,7 +17,11 @@ interface DerivApiContextType {
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
 
-const APP_ID = 1089; // Default Deriv App ID
+const APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID || 1089;
+
+// Simple obfuscation for the token in local storage
+const encode = (str: string) => btoa(str);
+const decode = (str: string) => atob(str);
 
 export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
@@ -73,6 +78,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
         if (data.msg_type === 'authorize') {
             if (data.authorize) {
                 setToken(apiToken);
+                localStorage.setItem('deriv_token', encode(apiToken));
                 setIsConnected(true);
                 setBalance(data.authorize.balance);
                 setAccountType(data.authorize.is_virtual ? 'demo' : 'real');
@@ -80,6 +86,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                 socket.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                 resolve();
             } else {
+                localStorage.removeItem('deriv_token');
                 reject(new Error('Authorization failed.'));
             }
         }
@@ -107,15 +114,30 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       ws.current.close();
       ws.current = null;
     }
+    localStorage.removeItem('deriv_token');
   }, []);
 
   useEffect(() => {
+    const storedToken = localStorage.getItem('deriv_token');
+    if (storedToken) {
+      try {
+        const decodedToken = decode(storedToken);
+        connect(decodedToken).catch(() => {
+          // If connection fails with stored token, remove it.
+          localStorage.removeItem('deriv_token');
+        });
+      } catch (error) {
+        // If decoding fails, remove the invalid token.
+        localStorage.removeItem('deriv_token');
+      }
+    }
+
     return () => {
       if (ws.current) {
         ws.current.close();
       }
     };
-  }, []);
+  }, [connect]);
 
   return (
     <DerivApiContext.Provider value={{
