@@ -202,9 +202,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (isRunningRef.current) {
-            if (!config?.useBulkTrading) {
-                purchaseContract();
-            }
+            purchaseContract();
         }
     }
   }, [purchaseContract, stopBot, toast]);
