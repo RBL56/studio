@@ -75,7 +75,6 @@ export default function BotBuilderPage() {
             </Card>
           </TabsContent>
           <TabsContent value="dcircle">
-              <DigitAnalysisTool />
           </TabsContent>
           <TabsContent value="tradingview">
             <Card>
