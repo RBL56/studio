@@ -42,12 +42,12 @@ export default function BotConfigurationForm() {
       lastDigitPrediction: 1,
       initialStake: 1,
       ticks: 1,
-      takeProfit: '' as any,
-      stopLoss: '' as any,
+      takeProfit: 10,
+      stopLoss: 50,
       useMartingale: true,
       martingaleFactor: 2.1,
-      useBulkTrading: false,
-      bulkTradeCount: '' as any,
+      useBulkTrading: true,
+      bulkTradeCount: 10,
     },
   });
 
