@@ -71,10 +71,7 @@ export default function BotBuilderPage() {
                 <TabsContent value="signal-arena">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline flex items-center gap-2">
-                                <Trophy className="h-6 w-6" />
-                                Signal Arena
-                            </CardTitle>
+                            <CardTitle>Under Development</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p>This feature is currently under development and will be available soon.</p>
