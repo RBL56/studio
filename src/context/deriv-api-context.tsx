@@ -17,7 +17,7 @@ interface DerivApiContextType {
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
 
-const APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID || 1089;
+const APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
 
 // Simple obfuscation for the token in local storage
 const encode = (str: string) => btoa(str);
@@ -60,6 +60,15 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const connect = useCallback(async (apiToken: string) => {
+    if (!APP_ID || APP_ID === 'YOUR_APP_ID_HERE') {
+      toast({
+        variant: "destructive",
+        title: "Configuration Error",
+        description: "Deriv App ID is not set. Please set it in the .env file.",
+      });
+      return Promise.reject(new Error('Deriv App ID not set.'));
+    }
+
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.close();
     }
