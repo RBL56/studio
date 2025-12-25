@@ -18,15 +18,15 @@ import {
 } from './ui/dialog';
 import { ThemeToggle } from './theme-toggle';
 
-const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+const DERIV_APP_ID = 106684;
 
 export default function Header() {
   const { isConnected } = useDerivApi();
 
   const handleLoginRedirect = () => {
     const redirectUri = window.location.origin;
-    if (!DERIV_APP_ID || DERIV_APP_ID === 'YOUR_APP_ID_HERE') {
-      alert('Deriv App ID is not configured. Please set it in the .env file.');
+    if (!DERIV_APP_ID) {
+      alert('Deriv App ID is not configured.');
       return;
     }
     const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&redirect_uri=${redirectUri}`;
