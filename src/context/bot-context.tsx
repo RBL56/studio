@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
@@ -46,11 +47,18 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     totalProfitRef.current = totalProfit;
   }, [totalProfit]);
   
-  const stopBot = useCallback(() => {
+  const stopBot = useCallback((showToast = true) => {
     if (!isRunningRef.current) return;
     isRunningRef.current = false;
     setBotStatus('stopped');
-  }, []);
+    setTimeout(() => setBotStatus('idle'), 500); // Revert to idle after a short delay
+    if (showToast) {
+        toast({
+            title: "Bot Stopped",
+            description: "The trading bot has been stopped.",
+        });
+    }
+  }, [toast]);
 
   const resetStats = useCallback(() => {
     if (isRunningRef.current) {
@@ -88,7 +96,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
   const purchaseContract = useCallback(() => {
     if (!api || !configRef.current || !isRunningRef.current) {
-      if (isRunningRef.current) stopBot();
+      if (isRunningRef.current) stopBot(false);
       return;
     }
 
@@ -117,7 +125,10 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
   const handleMessage = useCallback((data: any) => {
     if (data.error) {
-      // Global errors are handled in DerivApiContext
+      // Global errors are handled in DerivApiContext, but we might want to stop the bot
+      if(data.error.code !== 'AlreadySubscribed'){
+        stopBot(false);
+      }
       return;
     }
     
@@ -146,7 +157,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
         setTrades(prev => prev.map(t => t.id === contract.contract_id.toString() ? {
             ...t,
-            payout: profit,
+            payout: contract.payout,
             isWin,
         } : t));
 
@@ -167,13 +178,13 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const config = configRef.current;
         if (config?.takeProfit && newTotalProfit >= config.takeProfit) {
             toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
-            stopBot();
+            stopBot(false);
             return;
         }
 
         if (config?.stopLoss && newTotalProfit <= -config.stopLoss) {
             toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss limit." });
-            stopBot();
+            stopBot(false);
             return;
         }
         
@@ -181,20 +192,20 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
           bulkTradesCompletedRef.current += 1;
           if (bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
             toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
-            stopBot();
+            stopBot(false);
             return;
           }
         }
 
         if (isRunningRef.current && !config?.useBulkTrading) {
-            setTimeout(purchaseContract, 0);
+            setTimeout(purchaseContract, 1000); // Add a 1s delay between sequential trades
         }
     }
   }, [purchaseContract, stopBot, toast]);
   
   useEffect(() => {
     if (!isConnected) {
-        stopBot();
+        stopBot(false);
         return;
     }
     const unsubscribe = subscribeToMessages(handleMessage);
@@ -203,10 +214,20 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
 
   const startBot = useCallback((config: BotConfigurationValues) => {
-    if (isRunningRef.current || !api) return;
+    if (isRunningRef.current || !api || !isConnected) {
+        if (!isConnected) {
+            toast({
+                variant: 'destructive',
+                title: 'Not Connected',
+                description: 'Please connect to the Deriv API first.',
+            });
+        }
+        return;
+    };
     
     configRef.current = config;
     currentStakeRef.current = config.initialStake;
+    bulkTradesCompletedRef.current = 0;
     
     resetStats();
     
@@ -217,12 +238,12 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       const tradeCount = config.bulkTradeCount || 1;
       for (let i = 0; i < tradeCount; i++) {
         // We add a small delay to avoid overwhelming the API with simultaneous requests
-        setTimeout(() => purchaseContract(), i * 50); 
+        setTimeout(() => purchaseContract(), i * 100); 
       }
     } else {
       purchaseContract();
     }
-  }, [api, purchaseContract, resetStats]);
+  }, [api, isConnected, purchaseContract, resetStats, toast]);
 
   const isBotRunning = botStatus === 'running' && isRunningRef.current;
 
@@ -252,3 +273,5 @@ export const useBot = () => {
   }
   return context;
 };
+
+    
