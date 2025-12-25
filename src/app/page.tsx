@@ -56,7 +56,14 @@ export default function BotBuilderPage() {
                 </TabsContent>
 
                 <TabsContent value="signalbot">
-                  {botBuilderInterface}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Under Development</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p>This feature is currently under development and will be available soon.</p>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
             </Tabs>
         </TabsContent>
