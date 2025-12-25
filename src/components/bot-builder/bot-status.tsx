@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2, PlayCircle, Square, CircleDollarSign, RotateCcw, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useBot } from '@/context/bot-context';
@@ -23,11 +23,6 @@ export function BotStatus() {
           description: 'Press "Start Bot" to begin trading.',
         };
       case 'idle':
-        return {
-          icon: <PlayCircle className="h-6 w-6 text-muted-foreground" />,
-          title: 'Bot is Idle',
-          description: 'Ready to start trading.',
-        };
       default:
         return {
           icon: <PlayCircle className="h-6 w-6 text-muted-foreground" />,

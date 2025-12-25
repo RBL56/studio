@@ -38,7 +38,7 @@ export function TradeLog() {
                             <p className="font-medium text-sm">{trade.description}</p>
                             <div className="text-right">
                                 <p className={`font-bold ${trade.isWin ? 'text-green-500' : 'text-red-500'}`}>
-                                    {trade.payout.toFixed(2)}
+                                    {trade.isWin ? `+${trade.payout.toFixed(2)}` : `-${trade.stake.toFixed(2)}`}
                                 </p>
                                 <p className="text-xs text-muted-foreground">USD</p>
                             </div>
