@@ -199,7 +199,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
         // For non-bulk trades, immediately purchase the next contract if still running
         if (isRunningRef.current && !config?.useBulkTrading) {
-            purchaseContract();
+            setTimeout(() => purchaseContract(), 100);
         }
     }
   }, [purchaseContract, stopBot, toast]);
