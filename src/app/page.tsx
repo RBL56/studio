@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -8,6 +7,7 @@ import { ShieldAlert, Bot, Signal, Trophy, CandlestickChart, Circle, Waypoints }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotProvider } from '@/context/bot-context';
+import { DigitAnalysisTool } from '@/components/digit-analysis-tool';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -43,6 +43,7 @@ export default function BotBuilderPage() {
         </TabsContent>
 
         <TabsContent value="dcircle">
+          <DigitAnalysisTool />
         </TabsContent>
 
         <TabsContent value="trading-view">
