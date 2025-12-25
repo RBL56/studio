@@ -21,6 +21,8 @@ interface BotContextType {
   startBot: (config: BotConfigurationValues) => void;
   stopBot: () => void;
   resetStats: () => void;
+  latestConfig: BotConfigurationValues | null;
+  setLatestConfig: (config: BotConfigurationValues) => void;
 }
 
 const BotContext = createContext<BotContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const [totalRuns, setTotalRuns] = useState(0);
   const [totalWins, setTotalWins] = useState(0);
   const [totalLosses, setTotalLosses] = useState(0);
+  const [latestConfig, setLatestConfig] = useState<BotConfigurationValues | null>(null);
 
   const configRef = useRef<BotConfigurationValues | null>(null);
   const currentStakeRef = useRef<number>(0);
@@ -139,7 +142,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         if (openContractsRef.current > 0) {
             openContractsRef.current--;
         }
-        if (openContractsRef.current === 0 && !configRef.current?.useBulkTrading) {
+        if (isRunningRef.current && !configRef.current?.useBulkTrading) {
             stopBot(false);
         }
       }
@@ -280,7 +283,9 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       isBotRunning,
       startBot,
       stopBot,
-      resetStats
+      resetStats,
+      latestConfig,
+      setLatestConfig
     }}>
       {children}
     </BotContext.Provider>
