@@ -38,7 +38,14 @@ export default function BotBuilderPage() {
                                     <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="speedbot">
-                                    <BotConfigurationForm />
+                                     <Card>
+                                        <CardHeader>
+                                            <CardTitle>Under Development</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p>This feature is currently under development and will be available soon.</p>
+                                        </CardContent>
+                                    </Card>
                                 </TabsContent>
                                 <TabsContent value="signalbot">
                                     <Card>
