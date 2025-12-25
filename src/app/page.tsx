@@ -7,6 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotProvider } from '@/context/bot-context';
 import { DigitAnalysisTool } from '@/components/digit-analysis-tool';
+import BotConfigurationForm from '@/components/bot-builder/bot-configuration-form';
+import BotStatus from '@/components/bot-builder/bot-status';
+import TradeLog from '@/components/bot-builder/trade-log';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -32,14 +35,15 @@ export default function BotBuilderPage() {
                             <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
                         </TabsList>
                         <TabsContent value="speedbot">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Under Development</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p>This feature is currently under development and will be available soon.</p>
-                                </CardContent>
-                            </Card>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <div className="lg:col-span-1">
+                                    <BotConfigurationForm />
+                                </div>
+                                <div className="lg:col-span-2 space-y-8">
+                                    <BotStatus />
+                                    <TradeLog />
+                                </div>
+                            </div>
                         </TabsContent>
                         <TabsContent value="signalbot">
                              <Card>
