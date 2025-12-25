@@ -42,9 +42,12 @@ export default function BotConfigurationForm() {
       lastDigitPrediction: 1,
       initialStake: 1,
       ticks: 1,
+      takeProfit: '' as any,
+      stopLoss: '' as any,
       useMartingale: true,
       martingaleFactor: 2.1,
       useBulkTrading: false,
+      bulkTradeCount: '' as any,
     },
   });
 
@@ -198,7 +201,7 @@ export default function BotConfigurationForm() {
                     <FormItem>
                         <FormLabel>Last Digit Prediction</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g. 1" {...field} disabled={isBotRunning} />
+                        <Input type="number" placeholder="e.g. 1" {...field} value={field.value ?? ''} disabled={isBotRunning} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -243,7 +246,7 @@ export default function BotConfigurationForm() {
                     <FormItem>
                         <FormLabel>Take Profit ($)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g. 10" {...field} disabled={isBotRunning}/>
+                        <Input type="number" placeholder="e.g. 10" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -256,7 +259,7 @@ export default function BotConfigurationForm() {
                     <FormItem>
                         <FormLabel>Stop Loss ($)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g. 5" {...field} disabled={isBotRunning} />
+                        <Input type="number" placeholder="e.g. 5" {...field} value={field.value ?? ''} disabled={isBotRunning} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -294,7 +297,7 @@ export default function BotConfigurationForm() {
                     <FormItem>
                         <FormLabel>Martingale Factor</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g. 2.1" {...field} disabled={isBotRunning}/>
+                        <Input type="number" placeholder="e.g. 2.1" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -332,7 +335,7 @@ export default function BotConfigurationForm() {
                     <FormItem>
                         <FormLabel>Number of Trades</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g. 10" {...field} disabled={isBotRunning}/>
+                        <Input type="number" placeholder="e.g. 10" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
