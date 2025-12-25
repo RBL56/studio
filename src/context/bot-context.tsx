@@ -238,14 +238,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     isRunningRef.current = true;
     setBotStatus('running');
     
-    if (config.useBulkTrading) {
-      const tradeCount = config.bulkTradeCount || 1;
-      for (let i = 0; i < tradeCount; i++) {
-        setTimeout(() => purchaseContract(), i * 100); 
-      }
-    } else {
-      purchaseContract();
-    }
+    purchaseContract();
   }, [api, isConnected, purchaseContract, toast]);
 
   const isBotRunning = botStatus === 'running' && isRunningRef.current;
