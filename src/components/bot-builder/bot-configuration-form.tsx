@@ -32,11 +32,11 @@ const formSchema = z.object({
 export type BotConfigurationValues = z.infer<typeof formSchema>;
 
 export default function BotConfigurationForm() {
-  const { startBot, stopBot, resetStats, isBotRunning, setForm } = useBot();
+  const { startBot, stopBot, resetStats, isBotRunning, form, setForm } = useBot();
 
-  const form = useForm<BotConfigurationValues>({
+  const localForm = useForm<BotConfigurationValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: form?.getValues() ?? {
       market: 'R_100',
       tradeType: 'matches_differs',
       predictionType: 'differs',
@@ -52,20 +52,21 @@ export default function BotConfigurationForm() {
     },
   });
 
-  // Share the form instance with the context
   useEffect(() => {
-    if (setForm) {
-      setForm(form);
+    if (!form) {
+      setForm(localForm);
     }
-  }, [form, setForm]);
+  }, [form, localForm, setForm]);
+
+  const currentForm = form || localForm;
 
   const onSubmit = (values: BotConfigurationValues) => {
     startBot(values);
   };
 
-  const tradeType = form.watch('tradeType');
-  const useMartingale = form.watch('useMartingale');
-  const useBulkTrading = form.watch('useBulkTrading');
+  const tradeType = currentForm.watch('tradeType');
+  const useMartingale = currentForm.watch('useMartingale');
+  const useBulkTrading = currentForm.watch('useBulkTrading');
 
   return (
     <Card>
@@ -76,10 +77,10 @@ export default function BotConfigurationForm() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <Form {...currentForm}>
+          <form onSubmit={currentForm.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-              control={form.control}
+              control={currentForm.control}
               name="market"
               render={({ field }) => (
                 <FormItem>
@@ -104,16 +105,16 @@ export default function BotConfigurationForm() {
             />
 
             <FormField
-              control={form.control}
+              control={currentForm.control}
               name="tradeType"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Trade Type</FormLabel>
                   <Select onValueChange={(value) => {
                       field.onChange(value);
-                      if (value === 'matches_differs') form.setValue('predictionType', 'differs');
-                      if (value === 'even_odd') form.setValue('predictionType', 'odd');
-                      if (value === 'over_under') form.setValue('predictionType', 'over');
+                      if (value === 'matches_differs') currentForm.setValue('predictionType', 'differs');
+                      if (value === 'even_odd') currentForm.setValue('predictionType', 'odd');
+                      if (value === 'over_under') currentForm.setValue('predictionType', 'over');
                   }} defaultValue={field.value} disabled={isBotRunning}>
                     <FormControl>
                       <SelectTrigger>
@@ -133,7 +134,7 @@ export default function BotConfigurationForm() {
 
             {tradeType === 'matches_differs' && (
                  <FormField
-                 control={form.control}
+                 control={currentForm.control}
                  name="predictionType"
                  render={({ field }) => (
                    <FormItem>
@@ -156,7 +157,7 @@ export default function BotConfigurationForm() {
             )}
             {tradeType === 'even_odd' && (
                  <FormField
-                 control={form.control}
+                 control={currentForm.control}
                  name="predictionType"
                  render={({ field }) => (
                    <FormItem>
@@ -179,7 +180,7 @@ export default function BotConfigurationForm() {
             )}
             {tradeType === 'over_under' && (
                  <FormField
-                 control={form.control}
+                 control={currentForm.control}
                  name="predictionType"
                  render={({ field }) => (
                    <FormItem>
@@ -203,7 +204,7 @@ export default function BotConfigurationForm() {
 
             {tradeType !== 'even_odd' && (
                 <FormField
-                    control={form.control}
+                    control={currentForm.control}
                     name="lastDigitPrediction"
                     render={({ field }) => (
                     <FormItem>
@@ -219,7 +220,7 @@ export default function BotConfigurationForm() {
             
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={currentForm.control}
                 name="initialStake"
                 render={({ field }) => (
                   <FormItem>
@@ -232,7 +233,7 @@ export default function BotConfigurationForm() {
                 )}
               />
               <FormField
-                control={form.control}
+                control={currentForm.control}
                 name="ticks"
                 render={({ field }) => (
                   <FormItem>
@@ -248,7 +249,7 @@ export default function BotConfigurationForm() {
 
             <div className="grid grid-cols-2 gap-4">
                 <FormField
-                    control={form.control}
+                    control={currentForm.control}
                     name="takeProfit"
                     render={({ field }) => (
                     <FormItem>
@@ -261,7 +262,7 @@ export default function BotConfigurationForm() {
                     )}
                 />
                 <FormField
-                    control={form.control}
+                    control={currentForm.control}
                     name="stopLoss"
                     render={({ field }) => (
                     <FormItem>
@@ -276,7 +277,7 @@ export default function BotConfigurationForm() {
             </div>
             
             <FormField
-              control={form.control}
+              control={currentForm.control}
               name="useMartingale"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
@@ -299,7 +300,7 @@ export default function BotConfigurationForm() {
 
             {useMartingale && (
                 <FormField
-                    control={form.control}
+                    control={currentForm.control}
                     name="martingaleFactor"
                     render={({ field }) => (
                     <FormItem>
@@ -314,7 +315,7 @@ export default function BotConfigurationForm() {
             )}
 
             <FormField
-              control={form.control}
+              control={currentForm.control}
               name="useBulkTrading"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
@@ -337,7 +338,7 @@ export default function BotConfigurationForm() {
 
             {useBulkTrading && (
                 <FormField
-                    control={form.control}
+                    control={currentForm.control}
                     name="bulkTradeCount"
                     render={({ field }) => (
                     <FormItem>
@@ -359,7 +360,10 @@ export default function BotConfigurationForm() {
               <Button type="button" variant="destructive" onClick={stopBot} disabled={!isBotRunning} className="w-full">
                 <Pause className="mr-2 h-4 w-4" /> Stop
               </Button>
-              <Button type="button" variant="outline" onClick={resetStats} disabled={isBotRunning} className="w-full">
+              <Button type="button" variant="outline" onClick={() => {
+                resetStats();
+                currentForm.reset();
+              }} disabled={isBotRunning} className="w-full">
                 <RotateCcw className="mr-2 h-4 w-4" /> Reset
               </Button>
             </div>

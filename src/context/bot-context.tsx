@@ -6,7 +6,25 @@ import type { BotConfigurationValues } from '@/components/bot-builder/bot-config
 import type { Trade } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDerivApi } from './deriv-api-context';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const formSchema = z.object({
+  market: z.string().min(1, 'Market is required'),
+  tradeType: z.enum(['matches_differs', 'even_odd', 'over_under']),
+  predictionType: z.enum(['matches', 'differs', 'even', 'odd', 'over', 'under']),
+  lastDigitPrediction: z.coerce.number().min(0).max(9).optional(),
+  initialStake: z.coerce.number().positive('Stake must be positive'),
+  ticks: z.coerce.number().int().min(1, 'Ticks must be at least 1').max(10, 'Ticks cannot exceed 10'),
+  takeProfit: z.coerce.number().positive('Take profit must be positive').optional(),
+  stopLoss: z.coerce.number().positive('Stop loss must be positive').optional(),
+  useMartingale: z.boolean().default(false),
+  martingaleFactor: z.coerce.number().min(1, 'Factor must be at least 1').optional(),
+  useBulkTrading: z.boolean().default(false),
+  bulkTradeCount: z.coerce.number().int().min(1, 'Count must be at least 1').optional(),
+});
+
 
 export type BotStatus = 'idle' | 'running' | 'stopped';
 
