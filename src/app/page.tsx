@@ -8,14 +8,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotProvider } from '@/context/bot-context';
 import { DigitAnalysisTool } from '@/components/digit-analysis-tool';
+import BotConfigurationForm from '@/components/bot-builder/bot-configuration-form';
+import BotStatus from '@/components/bot-builder/bot-status';
+import TradeLog from '@/components/bot-builder/trade-log';
+import { Separator } from '@/components/ui/separator';
+
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
-  const [activeTab, setActiveTab] = useState('bot-builder');
+
+  const botBuilderInterface = (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-1">
+        <BotConfigurationForm />
+      </div>
+      <div className="lg:col-span-2">
+        <BotStatus />
+        <Separator className="my-6" />
+        <TradeLog />
+      </div>
+    </div>
+  );
 
   const tradingInterface = (
     <div className="grid grid-cols-1 gap-8">
-      <Tabs defaultValue="bot-builder" className="w-full" onValueChange={setActiveTab}>
+      <Tabs defaultValue="bot-builder" className="w-full">
         <ScrollArea className="w-full whitespace-nowrap pb-4">
             <TabsList className="grid w-full grid-cols-4 mb-6 min-w-[600px]">
                 <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
@@ -35,9 +52,11 @@ export default function BotBuilderPage() {
                 </ScrollArea>
                 
                 <TabsContent value="speedbot">
+                  {botBuilderInterface}
                 </TabsContent>
 
                 <TabsContent value="signalbot">
+                  {botBuilderInterface}
                 </TabsContent>
             </Tabs>
         </TabsContent>
