@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useBot } from '@/context/bot-context';
 import { VOLATILITY_MARKETS } from '@/lib/constants';
 import { Play, Pause, RotateCcw, Bot as BotIcon } from 'lucide-react';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   market: z.string().min(1, 'Market is required'),
@@ -52,7 +53,11 @@ export default function BotConfigurationForm() {
   });
 
   // Share the form instance with the context
-  setForm(form);
+  useEffect(() => {
+    if (setForm) {
+      setForm(form);
+    }
+  }, [form, setForm]);
 
   const onSubmit = (values: BotConfigurationValues) => {
     startBot(values);
