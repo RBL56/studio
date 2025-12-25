@@ -2,55 +2,26 @@
 'use client';
 
 import { useState } from 'react';
-import { BotConfigurationForm } from '@/components/bot-builder/bot-configuration-form';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldAlert, Bot, Signal, Trophy, Circle, CandlestickChart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotProvider } from '@/context/bot-context';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
-import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
-import { BotStatus } from '@/components/bot-builder/bot-status';
-import { TradeLog } from '@/components/bot-builder/trade-log';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
   const [activeTab, setActiveTab] = useState('speedbot');
 
-  const formMethods = useForm<BotConfigurationValues>({
-    resolver: zodResolver(botConfigurationSchema),
-    defaultValues: {
-      market: '1HZ75V',
-      tradeType: 'matches_differs',
-      ticks: 1,
-      lastDigitPrediction: 4,
-      predictionType: 'differs',
-      initialStake: 10,
-      takeProfit: 2,
-      stopLoss: 10,
-      useMartingale: true,
-      martingaleFactor: 2,
-      useBulkTrading: false,
-      bulkTradeCount: 5,
-    },
-  });
-
-  const showStatusPanels = ['speedbot', 'signalbot', 'dcircle'].includes(activeTab);
-
   const tradingInterface = (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className={showStatusPanels ? 'lg:col-span-2' : 'lg:col-span-3'}>
+    <div className="grid grid-cols-1 gap-8">
+      <div>
         <Tabs defaultValue="speedbot" className="w-full" onValueChange={setActiveTab}>
           <ScrollArea className="w-full whitespace-nowrap pb-4">
-            <TabsList className="grid w-full grid-cols-5 mb-6 min-w-[600px]">
+            <TabsList className="grid w-full grid-cols-3 mb-6 min-w-[400px]">
               <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
               <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
               <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
-              <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
-              <TabsTrigger value="tradingview" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
             </TabsList>
           </ScrollArea>
           
@@ -71,33 +42,43 @@ export default function BotBuilderPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="dcircle">
-          </TabsContent>
-          <TabsContent value="tradingview">
-            <div className="w-full rounded-md overflow-hidden border h-[70vh]">
-                <iframe
-                    src="https://charts.deriv.com"
-                    className="w-full h-full"
-                    title="Deriv TradingView Chart"
-                />
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
-
-      {showStatusPanels && (
-        <div className="space-y-8 lg:col-span-1">
-          <BotStatus />
-          <TradeLog />
-        </div>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                    <Circle className="mr-2 h-5 w-5" />
+                    DCircle
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                    <CandlestickChart className="mr-2 h-5 w-5" />
+                    TradingView
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="w-full rounded-md overflow-hidden border h-[40vh]">
+                    <iframe
+                        src="https://charts.deriv.com"
+                        className="w-full h-full"
+                        title="Deriv TradingView Chart"
+                    />
+                </div>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 
   return (
     <div className="container py-8">
       <BotProvider>
-        <FormProvider {...formMethods}>
           {isConnected ? (
             tradingInterface
           ) : (
@@ -118,7 +99,6 @@ export default function BotBuilderPage() {
                 </CardContent>
             </Card>
           )}
-        </FormProvider>
       </BotProvider>
     </div>
   );
