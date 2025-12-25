@@ -61,6 +61,7 @@ export default function BotBuilderPage() {
 
                 <TabsContent value="dcircle">
                     <DigitAnalysisTool />
+                    <QuickTradePanel />
                 </TabsContent>
 
                 <TabsContent value="trading-view" forceMount>
