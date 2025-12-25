@@ -1,12 +1,12 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, PlayCircle, Square, CircleDollarSign, RotateCcw } from 'lucide-react';
+import { Loader2, PlayCircle, Square, CircleDollarSign, RotateCcw, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useBot } from '@/context/bot-context';
 
 export function BotStatus() {
-  const { botStatus, totalProfit, totalRuns, totalStake, resetStats, isBotRunning } = useBot();
+  const { botStatus, totalProfit, totalRuns, totalStake, totalWins, totalLosses, resetStats, isBotRunning } = useBot();
 
   const getStatusContent = () => {
     switch (botStatus) {
@@ -44,7 +44,7 @@ export function BotStatus() {
       <CardHeader>
         <CardTitle className="font-headline">Bot Status</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
             <div>
                 <p className="font-semibold text-lg">{title}</p>
@@ -52,25 +52,42 @@ export function BotStatus() {
             </div>
             {icon}
         </div>
-        <div className="grid grid-cols-2 gap-4 text-sm pt-4">
-            <div className="flex items-center gap-2">
-                <CircleDollarSign className="h-5 w-5 text-green-500" />
-                <div>
-                    <p className="text-muted-foreground">Total Profit</p>
-                    <p className="font-bold">{totalProfit.toFixed(2)} USD</p>
+        
+        <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <CircleDollarSign className="h-5 w-5 text-green-500" />
+                    <div>
+                        <p className="text-muted-foreground">Total Profit</p>
+                        <p className="font-bold">{totalProfit.toFixed(2)} USD</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <CircleDollarSign className="h-5 w-5 text-red-500" />
+                    <div>
+                        <p className="text-muted-foreground">Total Stake</p>
+                        <p className="font-bold">{totalStake.toFixed(2)} USD</p>
+                    </div>
                 </div>
             </div>
-            <div className="flex items-center gap-2">
-                <p className="font-bold text-xl">{totalRuns}</p>
-                <div>
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <p className="font-bold text-lg">{totalRuns}</p>
                     <p className="text-muted-foreground">Total Runs</p>
                 </div>
-            </div>
-             <div className="flex items-center gap-2">
-                <CircleDollarSign className="h-5 w-5 text-red-500" />
-                <div>
-                    <p className="text-muted-foreground">Total Stake</p>
-                    <p className="font-bold">{totalStake.toFixed(2)} USD</p>
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                    <div>
+                        <p className="text-muted-foreground">Wins</p>
+                        <p className="font-bold">{totalWins}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <TrendingDown className="h-5 w-5 text-red-500" />
+                    <div>
+                        <p className="text-muted-foreground">Losses</p>
+                        <p className="font-bold">{totalLosses}</p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -198,7 +198,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (isRunningRef.current && !config?.useBulkTrading) {
-            setTimeout(purchaseContract, 1000); // Add a 1s delay between sequential trades
+            purchaseContract();
         }
     }
   }, [purchaseContract, stopBot, toast]);
