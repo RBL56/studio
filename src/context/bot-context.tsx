@@ -197,6 +197,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
+        // For non-bulk trades, immediately purchase the next contract if still running
         if (isRunningRef.current && !config?.useBulkTrading) {
             purchaseContract();
         }
@@ -229,7 +230,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     currentStakeRef.current = config.initialStake;
     bulkTradesCompletedRef.current = 0;
     
-    resetStats();
+    // Do not reset stats automatically, let user do it.
+    // resetStats(); 
     
     isRunningRef.current = true;
     setBotStatus('running');
@@ -243,7 +245,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     } else {
       purchaseContract();
     }
-  }, [api, isConnected, purchaseContract, resetStats, toast]);
+  }, [api, isConnected, purchaseContract, toast]);
 
   const isBotRunning = botStatus === 'running' && isRunningRef.current;
 
