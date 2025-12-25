@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useToast } from '@/hooks/use-toast';
 
 export default function QuickTradePanel() {
-  const { startBot, stopBot, resetStats, isBotRunning, latestConfig } = useBot();
+  const { startBot, stopBot, resetStats, isBotRunning, form } = useBot();
   const { toast } = useToast();
 
   const handleStart = () => {
-    if (latestConfig) {
-      startBot(latestConfig);
+    if (form) {
+      const config = form.getValues();
+      startBot(config);
     } else {
         toast({
             variant: "destructive",

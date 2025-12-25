@@ -6,6 +6,7 @@ import type { BotConfigurationValues } from '@/components/bot-builder/bot-config
 import type { Trade } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDerivApi } from './deriv-api-context';
+import { UseFormReturn } from 'react-hook-form';
 
 export type BotStatus = 'idle' | 'running' | 'stopped';
 
@@ -21,8 +22,8 @@ interface BotContextType {
   startBot: (config: BotConfigurationValues) => void;
   stopBot: () => void;
   resetStats: () => void;
-  latestConfig: BotConfigurationValues | null;
-  setLatestConfig: (config: BotConfigurationValues) => void;
+  form: UseFormReturn<BotConfigurationValues> | null;
+  setForm: (form: UseFormReturn<BotConfigurationValues>) => void;
 }
 
 const BotContext = createContext<BotContextType | undefined>(undefined);
@@ -38,7 +39,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const [totalRuns, setTotalRuns] = useState(0);
   const [totalWins, setTotalWins] = useState(0);
   const [totalLosses, setTotalLosses] = useState(0);
-  const [latestConfig, setLatestConfig] = useState<BotConfigurationValues | null>(null);
+  const [form, setForm] = useState<UseFormReturn<BotConfigurationValues> | null>(null);
 
   const configRef = useRef<BotConfigurationValues | null>(null);
   const currentStakeRef = useRef<number>(0);
@@ -221,10 +222,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        if (isRunningRef.current && !config?.useBulkTrading) {
+        if (isRunningRef.current) {
             purchaseContract();
-        } else if (openContractsRef.current === 0) {
-            stopBot(false);
         }
     }
   }, [purchaseContract, stopBot, toast]);
@@ -284,8 +283,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       startBot,
       stopBot,
       resetStats,
-      latestConfig,
-      setLatestConfig
+      form,
+      setForm
     }}>
       {children}
     </BotContext.Provider>
