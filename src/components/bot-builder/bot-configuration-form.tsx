@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useBot } from '@/context/bot-context';
 import { VOLATILITY_MARKETS } from '@/lib/constants';
 import { Play, Pause, RotateCcw, Bot as BotIcon } from 'lucide-react';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   market: z.string().min(1, 'Market is required'),
@@ -31,11 +32,11 @@ const formSchema = z.object({
 export type BotConfigurationValues = z.infer<typeof formSchema>;
 
 export default function BotConfigurationForm() {
-  const { startBot, stopBot, resetStats, isBotRunning } = useBot();
+  const { startBot, stopBot, resetStats, isBotRunning, setBotConfig, botConfig } = useBot();
 
   const form = useForm<BotConfigurationValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: botConfig || {
       market: 'R_100',
       tradeType: 'matches_differs',
       predictionType: 'differs',
@@ -50,6 +51,12 @@ export default function BotConfigurationForm() {
       bulkTradeCount: 10,
     },
   });
+
+  const watchedValues = form.watch();
+
+  useEffect(() => {
+    setBotConfig(watchedValues);
+  }, [watchedValues, setBotConfig]);
 
   const onSubmit = (values: BotConfigurationValues) => {
     startBot(values);

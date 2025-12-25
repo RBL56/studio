@@ -18,6 +18,8 @@ interface BotContextType {
   totalWins: number;
   totalLosses: number;
   isBotRunning: boolean;
+  botConfig: BotConfigurationValues | null;
+  setBotConfig: (config: BotConfigurationValues) => void;
   startBot: (config: BotConfigurationValues) => void;
   stopBot: () => void;
   resetStats: () => void;
@@ -36,6 +38,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const [totalRuns, setTotalRuns] = useState(0);
   const [totalWins, setTotalWins] = useState(0);
   const [totalLosses, setTotalLosses] = useState(0);
+  const [botConfig, setBotConfig] = useState<BotConfigurationValues | null>(null);
 
   const configRef = useRef<BotConfigurationValues | null>(null);
   const currentStakeRef = useRef<number>(0);
@@ -43,6 +46,10 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const totalProfitRef = useRef(0);
   const bulkTradesCompletedRef = useRef(0);
   const openContractsRef = useRef(0);
+
+  useEffect(() => {
+    configRef.current = botConfig;
+  }, [botConfig]);
 
   useEffect(() => {
     totalProfitRef.current = totalProfit;
@@ -101,8 +108,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     }
     
     if (!isRunningRef.current) {
-        // If the bot was stopped, but there are still contracts being processed,
-        // we should not purchase new ones.
         return;
     }
 
@@ -246,7 +251,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         return;
     };
     
-    configRef.current = config;
+    setBotConfig(config);
+    
     currentStakeRef.current = config.initialStake;
     bulkTradesCompletedRef.current = 0;
     openContractsRef.current = 0;
@@ -276,6 +282,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       totalWins,
       totalLosses,
       isBotRunning,
+      botConfig,
+      setBotConfig,
       startBot,
       stopBot,
       resetStats
