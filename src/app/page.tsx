@@ -58,7 +58,7 @@ export default function BotBuilderPage() {
                     <DigitAnalysisTool />
                 </TabsContent>
 
-                <TabsContent value="trading-view" forceMount>
+                <TabsContent value="trading-view">
                     <div className="w-full rounded-md overflow-hidden border h-[70vh]">
                         <iframe
                             src="https://charts.deriv.com"
