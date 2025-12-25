@@ -51,7 +51,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     if (!isRunningRef.current) return;
     isRunningRef.current = false;
     setBotStatus('stopped');
-    setTimeout(() => setBotStatus('idle'), 500); // Revert to idle after a short delay
+    setTimeout(() => setBotStatus('idle'), 500);
     if (showToast) {
         toast({
             title: "Bot Stopped",
@@ -125,7 +125,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
   const handleMessage = useCallback((data: any) => {
     if (data.error) {
-      // Global errors are handled in DerivApiContext, but we might want to stop the bot
       if(data.error.code !== 'AlreadySubscribed'){
         stopBot(false);
       }
@@ -149,7 +148,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     if (data.msg_type === 'proposal_open_contract' && data.proposal_open_contract?.contract_id) {
         if (!isRunningRef.current) return;
         const contract = data.proposal_open_contract;
-        if (!contract.is_sold) return; // Contract not finished yet
+        if (!contract.is_sold) return;
 
         const isWin = contract.status === 'won';
         const profit = contract.profit;
@@ -197,9 +196,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        // For non-bulk trades, immediately purchase the next contract if still running
         if (isRunningRef.current && !config?.useBulkTrading) {
-            setTimeout(() => purchaseContract(), 100);
+            purchaseContract();
         }
     }
   }, [purchaseContract, stopBot, toast]);
@@ -230,16 +228,12 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     currentStakeRef.current = config.initialStake;
     bulkTradesCompletedRef.current = 0;
     
-    // Do not reset stats automatically, let user do it.
-    // resetStats(); 
-    
     isRunningRef.current = true;
     setBotStatus('running');
     
     if (config.useBulkTrading) {
       const tradeCount = config.bulkTradeCount || 1;
       for (let i = 0; i < tradeCount; i++) {
-        // We add a small delay to avoid overwhelming the API with simultaneous requests
         setTimeout(() => purchaseContract(), i * 100); 
       }
     } else {
@@ -275,5 +269,3 @@ export const useBot = () => {
   }
   return context;
 };
-
-    
