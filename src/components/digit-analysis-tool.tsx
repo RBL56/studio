@@ -129,11 +129,7 @@ export function DigitAnalysisTool() {
             setTimeout(() => setActiveDigit(null), 500);
         }
 
-        if (totalTicksProcessedRef.current % 10 === 0) { // Update display periodically
-             updateDisplay();
-        }
-
-    }, [currentMarket, updateDisplay]);
+    }, [currentMarket]);
 
     const simulateHistoricalCollection = useCallback(() => {
         let simulatedTicks = 0;
@@ -241,7 +237,9 @@ export function DigitAnalysisTool() {
     }, []);
 
     useEffect(() => {
-        updateDisplay();
+        if (totalTicksProcessedRef.current % 10 === 0 || tickCount < 100) {
+            updateDisplay();
+        }
     }, [tickCount, updateDisplay]);
 
     return (
