@@ -10,7 +10,6 @@ import { DigitAnalysisTool } from '@/components/digit-analysis-tool';
 import BotConfigurationForm from '@/components/bot-builder/bot-configuration-form';
 import BotStatus from '@/components/bot-builder/bot-status';
 import TradeLog from '@/components/bot-builder/trade-log';
-import QuickTradePanel from '@/components/bot-builder/quick-trade-panel';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -61,7 +60,6 @@ export default function BotBuilderPage() {
 
                 <TabsContent value="dcircle">
                     <DigitAnalysisTool />
-                    <QuickTradePanel />
                 </TabsContent>
 
                 <TabsContent value="trading-view">
