@@ -12,7 +12,6 @@ import { BotProvider } from '@/context/bot-context';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
-import { DigitAnalysisTool } from '@/components/bot-builder/digit-analysis-tool';
 import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
 import { BotStatus } from '@/components/bot-builder/bot-status';
 import { TradeLog } from '@/components/bot-builder/trade-log';
@@ -77,26 +76,13 @@ export default function BotBuilderPage() {
           <TabsContent value="dcircle">
           </TabsContent>
           <TabsContent value="tradingview">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline flex items-center gap-2">
-                    <CandlestickChart className="h-6 w-6" />
-                    TradingView Chart
-                    </CardTitle>
-                    <CardDescription>
-                    Live chart from deriv.com for your analysis.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="aspect-video w-full rounded-md overflow-hidden border">
-                        <iframe
-                            src="https://charts.deriv.com"
-                            className="w-full h-full"
-                            title="Deriv TradingView Chart"
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="w-full rounded-md overflow-hidden border h-[70vh]">
+                <iframe
+                    src="https://charts.deriv.com"
+                    className="w-full h-full"
+                    title="Deriv TradingView Chart"
+                />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
