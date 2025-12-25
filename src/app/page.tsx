@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { BotConfigurationForm } from '@/components/bot-builder/bot-configuration-form';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,9 +14,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { botConfigurationSchema, type BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
 import { DigitAnalysisTool } from '@/components/bot-builder/digit-analysis-tool';
 import { StartTradingButton } from '@/components/bot-builder/start-trading-button';
+import { BotStatus } from '@/components/bot-builder/bot-status';
+import { TradeLog } from '@/components/bot-builder/trade-log';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
+  const [activeTab, setActiveTab] = useState('speedbot');
 
   const formMethods = useForm<BotConfigurationValues>({
     resolver: zodResolver(botConfigurationSchema),
@@ -35,10 +39,12 @@ export default function BotBuilderPage() {
     },
   });
 
+  const showStatusPanels = ['speedbot', 'signalbot', 'dcircle'].includes(activeTab);
+
   const tradingInterface = (
-    <div className="grid grid-cols-1">
-      <div className="space-y-8">
-        <Tabs defaultValue="speedbot" className="w-full">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className={showStatusPanels ? 'lg:col-span-2' : 'lg:col-span-3'}>
+        <Tabs defaultValue="speedbot" className="w-full" onValueChange={setActiveTab}>
           <ScrollArea className="w-full whitespace-nowrap pb-4">
             <TabsList className="grid w-full grid-cols-5 mb-6 min-w-[600px]">
               <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
@@ -70,7 +76,6 @@ export default function BotBuilderPage() {
           </TabsContent>
           <TabsContent value="dcircle">
               <DigitAnalysisTool />
-              <StartTradingButton />
           </TabsContent>
           <TabsContent value="tradingview">
             <Card>
@@ -91,12 +96,18 @@ export default function BotBuilderPage() {
                             title="Deriv TradingView Chart"
                         />
                     </div>
-                    <StartTradingButton />
                 </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      {showStatusPanels && (
+        <div className="space-y-8 lg:col-span-1">
+          <BotStatus />
+          <TradeLog />
+        </div>
+      )}
     </div>
   );
 
