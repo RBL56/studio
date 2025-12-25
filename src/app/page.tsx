@@ -12,7 +12,6 @@ import BotStatus from '@/components/bot-builder/bot-status';
 import TradeLog from '@/components/bot-builder/trade-log';
 import { Separator } from '@/components/ui/separator';
 
-
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
 
@@ -44,10 +43,10 @@ export default function BotBuilderPage() {
                                 <TabsContent value="signalbot">
                                     <Card>
                                         <CardHeader>
-                                        <CardTitle>Under Development</CardTitle>
+                                            <CardTitle>Under Development</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                        <p>This feature is currently under development and will be available soon.</p>
+                                            <p>This feature is currently under development and will be available soon.</p>
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
@@ -74,7 +73,7 @@ export default function BotBuilderPage() {
                         />
                     </div>
                 </TabsContent>
-
+                
                 <TabsContent value="signal-arena">
                     <Card>
                         <CardHeader>
