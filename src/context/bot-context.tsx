@@ -107,19 +107,24 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
     const contractType = getContractType(config.predictionType);
 
+    const parameters: any = {
+      amount: stake,
+      basis: "stake",
+      contract_type: contractType,
+      currency: "USD",
+      duration: config.ticks,
+      duration_unit: "t",
+      symbol: config.market,
+    };
+
+    if (config.tradeType !== 'even_odd') {
+      parameters.barrier = config.lastDigitPrediction;
+    }
+
     api.send(JSON.stringify({
       buy: "1",
       price: stake,
-      parameters: {
-        amount: stake,
-        basis: "stake",
-        contract_type: contractType,
-        currency: "USD",
-        duration: config.ticks,
-        duration_unit: "t",
-        symbol: config.market,
-        barrier: config.lastDigitPrediction,
-      }
+      parameters,
     }));
   }, [api, stopBot]);
 
