@@ -55,10 +55,8 @@ export default function BotBuilderPage() {
           </ScrollArea>
           
           <TabsContent value="speedbot">
-            <BotConfigurationForm />
           </TabsContent>
           <TabsContent value="signalbot">
-            <BotConfigurationForm />
           </TabsContent>
           <TabsContent value="signalarena">
             <Card>
