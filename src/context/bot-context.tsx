@@ -100,7 +100,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
     
-    if (!isRunningRef.current) {
+    if (!isRunningRef.current && openContractsRef.current === 0) {
         return;
     }
 
@@ -139,7 +139,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         if (openContractsRef.current > 0) {
             openContractsRef.current--;
         }
-        if (openContractsRef.current === 0) {
+        if (openContractsRef.current === 0 && !configRef.current?.useBulkTrading) {
             stopBot(false);
         }
       }
@@ -210,13 +210,15 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         if (config?.useBulkTrading) {
           bulkTradesCompletedRef.current += 1;
           if (bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
-            toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
-            stopBot(false);
+            if (openContractsRef.current === 0) {
+              toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
+              stopBot(false);
+            }
             return;
           }
         }
 
-        if (isRunningRef.current) {
+        if (isRunningRef.current && !config?.useBulkTrading) {
             purchaseContract();
         } else if (openContractsRef.current === 0) {
             stopBot(false);
@@ -253,7 +255,15 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     
     isRunningRef.current = true;
     setBotStatus('running');
-    purchaseContract();
+    
+    if (config.useBulkTrading) {
+      const tradeCount = config.bulkTradeCount || 1;
+      for (let i = 0; i < tradeCount; i++) {
+        purchaseContract();
+      }
+    } else {
+      purchaseContract();
+    }
   }, [api, isConnected, purchaseContract, toast]);
 
   const isBotRunning = botStatus === 'running' && isRunningRef.current;
