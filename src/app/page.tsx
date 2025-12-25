@@ -27,10 +27,9 @@ export default function BotBuilderPage() {
         <TabsContent value="bot-builder">
             <Tabs defaultValue="speedbot" className="w-full">
                 <ScrollArea className="w-full whitespace-nowrap pb-4">
-                    <TabsList className="grid w-full grid-cols-3 mb-6 min-w-[400px]">
-                    <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
-                    <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
-                    <TabsTrigger value="signalarena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-2 mb-6 min-w-[300px]">
+                        <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
+                        <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
                     </TabsList>
                 </ScrollArea>
                 
@@ -38,20 +37,6 @@ export default function BotBuilderPage() {
                 </TabsContent>
 
                 <TabsContent value="signalbot">
-                </TabsContent>
-
-                <TabsContent value="signalarena">
-                    <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline flex items-center gap-2">
-                        <Trophy className="h-6 w-6" />
-                        Signal Arena
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Signal Arena content will be here.</p>
-                    </CardContent>
-                    </Card>
                 </TabsContent>
             </Tabs>
         </TabsContent>
@@ -69,11 +54,12 @@ export default function BotBuilderPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline flex items-center gap-2">
-                        <Circle className="mr-2 h-5 w-5" />
-                        DCircle
+                        <Trophy className="h-6 w-6" />
+                        Signal Arena
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
+                    <p>Signal Arena content will be here.</p>
                 </CardContent>
             </Card>
         </TabsContent>
