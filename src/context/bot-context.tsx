@@ -196,8 +196,13 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        if (isRunningRef.current && !config?.useBulkTrading) {
-            purchaseContract();
+        if (isRunningRef.current) {
+            if (config?.useBulkTrading) {
+                // In bulk mode, we don't purchase again here. All purchases are done in startBot.
+            } else {
+                // In continuous mode, purchase the next contract.
+                purchaseContract();
+            }
         }
     }
   }, [purchaseContract, stopBot, toast]);
