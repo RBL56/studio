@@ -51,7 +51,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     if (!isRunningRef.current) return;
     isRunningRef.current = false;
     setBotStatus('stopped');
-    setTimeout(() => setBotStatus('idle'), 500);
     if (showToast) {
         toast({
             title: "Bot Stopped",
