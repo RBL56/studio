@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
@@ -200,8 +201,9 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
             } else if (data.subscription) {
                 subscriptionId.current = data.subscription.id;
             } else if (data.error) {
+                const errorMessage = data.error?.message || 'An unknown API error occurred.';
                 console.error('API Error:', data.error);
-                updateStatus('disconnected', `API Error: ${data.error.message}`);
+                updateStatus('disconnected', `API Error: ${errorMessage}`);
             }
         };
 
@@ -300,3 +302,5 @@ export const useDigitAnalysis = () => {
     }
     return context;
 };
+
+    
