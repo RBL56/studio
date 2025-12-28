@@ -29,7 +29,7 @@ export default function Header() {
       alert('Deriv App ID is not configured.');
       return;
     }
-    const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&redirect_uri=${redirectUri}`;
+    const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&redirect_uri=${redirectUri}&lang=EN&l=en`;
     window.location.href = derivAuthUrl;
   };
 
