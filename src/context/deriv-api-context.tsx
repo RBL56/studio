@@ -127,42 +127,37 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Handle OAuth redirect
     const urlParams = new URLSearchParams(window.location.search);
-    const accounts = urlParams.getAll('acct');
-    const tokens = urlParams.getAll('token');
-    
-    if (accounts.length > 0 && tokens.length > 0) {
-      const firstToken = tokens[0];
-      if(firstToken) {
-        connect(firstToken).then(() => {
-          // Clean up URL after successful connection
+    const urlToken = urlParams.get('token');
+
+    if (urlToken) {
+      connect(urlToken)
+        .then(() => {
+          // Clean up URL after successful connection from OAuth redirect
           const newUrl = window.location.pathname;
           window.history.replaceState({}, document.title, newUrl);
-        }).catch(() => {
+        })
+        .catch(() => {
           toast({
             variant: 'destructive',
-            title: 'Login failed',
-            description: 'Could not authenticate with the provided token.'
-          })
-        })
-        return; // Don't try to connect with stored token if we have one from URL
-      }
-    }
-
-
-    // Handle stored token
-    const storedToken = localStorage.getItem('deriv_token');
-    if (storedToken) {
-      try {
-        const decodedToken = decode(storedToken);
-        connect(decodedToken).catch(() => {
-          // If connection fails with stored token, remove it.
-          localStorage.removeItem('deriv_token');
+            title: 'Login Failed',
+            description: 'Authentication with the token from the URL failed.',
+          });
         });
-      } catch (error) {
-        // If decoding fails, remove the invalid token.
-        localStorage.removeItem('deriv_token');
+    } else {
+      // Handle stored token if no token in URL
+      const storedToken = localStorage.getItem('deriv_token');
+      if (storedToken) {
+        try {
+          const decodedToken = decode(storedToken);
+          connect(decodedToken).catch(() => {
+            // If connection fails with stored token, remove it.
+            localStorage.removeItem('deriv_token');
+          });
+        } catch (error) {
+          // If decoding fails, remove the invalid token.
+          localStorage.removeItem('deriv_token');
+        }
       }
     }
 
