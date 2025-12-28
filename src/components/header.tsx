@@ -18,7 +18,7 @@ import {
 } from './ui/dialog';
 import { ThemeToggle } from './theme-toggle';
 
-const DERIV_APP_ID = 106684;
+const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
 
 export default function Header() {
   const { isConnected } = useDerivApi();

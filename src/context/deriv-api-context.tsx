@@ -17,7 +17,7 @@ interface DerivApiContextType {
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
 
-const APP_ID = 106684;
+const APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
 
 // Simple obfuscation for the token in local storage
 const encode = (str: string) => btoa(str);
