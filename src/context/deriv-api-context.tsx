@@ -34,7 +34,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
 
   const handleGlobalMessage = (data: any) => {
     if (data.error) {
-      if (data.error.code !== 'AlreadySubscribed') {
+      if (data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired') {
         console.error('Deriv API error:', data.error.message);
         toast({
           variant: "destructive",
@@ -96,7 +96,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                 resolve();
             } else {
                 localStorage.removeItem('deriv_token');
-                reject(new Error('Authorization failed.'));
+                reject(new Error(data.error?.message || 'Authorization failed.'));
             }
         }
         
@@ -128,20 +128,30 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('token');
+    const accountTokens = [];
+    for (const [key, value] of urlParams.entries()) {
+        if (key.startsWith('token')) {
+            accountTokens.push(value);
+        }
+    }
+    const urlToken = accountTokens.length > 0 ? accountTokens[0] : null;
 
     if (urlToken) {
       connect(urlToken)
         .then(() => {
+          toast({
+            title: "Login Successful",
+            description: "You have been securely logged in.",
+          });
           // Clean up URL after successful connection from OAuth redirect
           const newUrl = window.location.pathname;
           window.history.replaceState({}, document.title, newUrl);
         })
-        .catch(() => {
+        .catch((error) => {
           toast({
             variant: 'destructive',
             title: 'Login Failed',
-            description: 'Authentication with the token from the URL failed.',
+            description: error.message || 'Authentication with the token from the URL failed.',
           });
         });
     } else {
