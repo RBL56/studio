@@ -127,6 +127,31 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    // Handle OAuth redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const accounts = urlParams.getAll('acct');
+    const tokens = urlParams.getAll('token');
+    
+    if (accounts.length > 0 && tokens.length > 0) {
+      const firstToken = tokens[0];
+      if(firstToken) {
+        connect(firstToken).then(() => {
+          // Clean up URL after successful connection
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        }).catch(() => {
+          toast({
+            variant: 'destructive',
+            title: 'Login failed',
+            description: 'Could not authenticate with the provided token.'
+          })
+        })
+        return; // Don't try to connect with stored token if we have one from URL
+      }
+    }
+
+
+    // Handle stored token
     const storedToken = localStorage.getItem('deriv_token');
     if (storedToken) {
       try {
@@ -146,7 +171,8 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
         ws.current.close();
       }
     };
-  }, [connect]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <DerivApiContext.Provider value={{
