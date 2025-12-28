@@ -132,75 +132,43 @@ export default function BotConfigurationForm() {
               )}
             />
 
-            {tradeType === 'matches_differs' && (
-                 <FormField
-                 control={currentForm.control}
-                 name="predictionType"
-                 render={({ field }) => (
-                   <FormItem>
-                     <FormLabel>Prediction Type</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isBotRunning}>
-                       <FormControl>
-                         <SelectTrigger>
-                           <SelectValue placeholder="Select a prediction type" />
-                         </SelectTrigger>
-                       </FormControl>
-                       <SelectContent>
-                         <SelectItem value="matches">Digit Matches</SelectItem>
-                         <SelectItem value="differs">Digit Differs</SelectItem>
-                       </SelectContent>
-                     </Select>
-                     <FormMessage />
-                   </FormItem>
-                 )}
-               />
-            )}
-            {tradeType === 'even_odd' && (
-                 <FormField
-                 control={currentForm.control}
-                 name="predictionType"
-                 render={({ field }) => (
-                   <FormItem>
-                     <FormLabel>Prediction Type</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isBotRunning}>
-                       <FormControl>
-                         <SelectTrigger>
-                           <SelectValue placeholder="Select a prediction type" />
-                         </SelectTrigger>
-                       </FormControl>
-                       <SelectContent>
-                         <SelectItem value="even">Digit Even</SelectItem>
-                         <SelectItem value="odd">Digit Odd</SelectItem>
-                       </SelectContent>
-                     </Select>
-                     <FormMessage />
-                   </FormItem>
-                 )}
-               />
-            )}
-            {tradeType === 'over_under' && (
-                 <FormField
-                 control={currentForm.control}
-                 name="predictionType"
-                 render={({ field }) => (
-                   <FormItem>
-                     <FormLabel>Prediction Type</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isBotRunning}>
-                       <FormControl>
-                         <SelectTrigger>
-                           <SelectValue placeholder="Select a prediction type" />
-                         </SelectTrigger>
-                       </FormControl>
-                       <SelectContent>
-                         <SelectItem value="over">Digit Over</SelectItem>
-                         <SelectItem value="under">Digit Under</SelectItem>
-                       </SelectContent>
-                     </Select>
-                     <FormMessage />
-                   </FormItem>
-                 )}
-               />
-            )}
+            <FormField
+              control={currentForm.control}
+              name="predictionType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prediction Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isBotRunning}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a prediction type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {tradeType === 'matches_differs' && (
+                        <>
+                          <SelectItem value="matches">Digit Matches</SelectItem>
+                          <SelectItem value="differs">Digit Differs</SelectItem>
+                        </>
+                      )}
+                      {tradeType === 'even_odd' && (
+                        <>
+                          <SelectItem value="even">Digit Even</SelectItem>
+                          <SelectItem value="odd">Digit Odd</SelectItem>
+                        </>
+                      )}
+                      {tradeType === 'over_under' && (
+                        <>
+                          <SelectItem value="over">Digit Over</SelectItem>
+                          <SelectItem value="under">Digit Under</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {tradeType !== 'even_odd' && (
                 <FormField
