@@ -278,7 +278,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     
     if (config.useBulkTrading) {
       const tradeCount = config.bulkTradeCount || 1;
-      for (let i = 0; i < tradeCount; i++) {
+      for (let i = 0; i < Math.min(tradeCount, 10); i++) {
         purchaseContract();
       }
     } else {
