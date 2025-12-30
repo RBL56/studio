@@ -126,7 +126,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
             dev: `${stdDev.toFixed(1)}%`
         });
 
-    }, []);
+    }, [setDigitStats, setEvenOdd, setAnalysis]);
 
     const processTick = useCallback((tick: Tick, isHistorical: boolean) => {
         const currentTick = ticksRef.current[currentIndexRef.current];
