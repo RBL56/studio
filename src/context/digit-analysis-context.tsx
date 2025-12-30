@@ -202,7 +202,6 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
                 subscriptionId.current = data.subscription.id;
             } else if (data.error) {
                 const errorMessage = data.error?.message || 'An unknown API error occurred.';
-                console.error('API Error:', data.error);
                 updateStatus('disconnected', `API Error: ${errorMessage}`);
             }
         };
