@@ -328,10 +328,7 @@ export default function BotConfigurationForm() {
               <Button type="button" variant="destructive" onClick={stopBot} disabled={!isBotRunning} className="w-full">
                 <Pause className="mr-2 h-4 w-4" /> Stop
               </Button>
-              <Button type="button" variant="outline" onClick={() => {
-                resetStats();
-                currentForm.reset();
-              }} disabled={isBotRunning} className="w-full">
+              <Button type="button" variant="outline" onClick={resetStats} disabled={isBotRunning} className="w-full">
                 <RotateCcw className="mr-2 h-4 w-4" /> Reset
               </Button>
             </div>
