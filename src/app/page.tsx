@@ -16,7 +16,7 @@ export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
 
   return (
-    <div className="container py-8">
+    <div className="container py-4 md:py-8">
       <BotProvider>
           {isConnected ? (
             <Tabs defaultValue="bot-builder" className="w-full">
