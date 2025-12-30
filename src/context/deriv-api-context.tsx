@@ -35,7 +35,6 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const handleGlobalMessage = (data: any) => {
     if (data.error) {
       if (data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired') {
-        console.error('Deriv API error:', data.error.message);
         toast({
           variant: "destructive",
           title: "API Error",
