@@ -60,10 +60,12 @@ export default function BotBuilderPage() {
                 </TabsContent>
 
                 <TabsContent value="dcircle">
-                    <div className="space-y-8">
+                  <ScrollArea className="h-[calc(100vh-250px)]">
+                    <div className="space-y-8 pr-4">
                         <QuickTradePanel />
                         <DigitAnalysisTool />
                     </div>
+                  </ScrollArea>
                 </TabsContent>
 
                 <TabsContent value="trading-view">
