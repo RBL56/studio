@@ -190,11 +190,6 @@ export function DigitAnalysisTool() {
                     )}
                 </div>
             </div>
-            
-            <div className="digit-analysis-footer">
-                Real-time Deriv API Connection • Analysis based on last {ticksToFetch} historical ticks + real-time updates<br />
-                Digit 0 is included in even numbers calculation • Technical Differences Fixed
-            </div>
         </div>
     );
 }
