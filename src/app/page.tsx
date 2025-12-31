@@ -11,6 +11,7 @@ import BotConfigurationForm from '@/components/bot-builder/bot-configuration-for
 import BotStatus from '@/components/bot-builder/bot-status';
 import TradeLog from '@/components/bot-builder/trade-log';
 import QuickTradePanel from '@/components/bot-builder/quick-trade-panel';
+import LocoSignals from '@/components/bot-builder/loco-signals';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
@@ -47,14 +48,7 @@ export default function BotBuilderPage() {
                             </div>
                         </TabsContent>
                         <TabsContent value="signalbot">
-                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Under Development</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p>This feature is currently under development and will be available soon.</p>
-                                </CardContent>
-                            </Card>
+                            <LocoSignals />
                         </TabsContent>
                     </Tabs>
                 </TabsContent>
