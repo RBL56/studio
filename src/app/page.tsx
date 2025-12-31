@@ -48,7 +48,14 @@ export default function BotBuilderPage() {
                             </div>
                         </TabsContent>
                         <TabsContent value="signalbot">
-                            <LocoSignals />
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Under Development</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p>This feature is currently under development and will be available soon.</p>
+                                </CardContent>
+                            </Card>
                         </TabsContent>
                     </Tabs>
                 </TabsContent>
@@ -73,14 +80,7 @@ export default function BotBuilderPage() {
                 </TabsContent>
                 
                 <TabsContent value="signal-arena">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Under Development</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>This feature is currently under development and will be available soon.</p>
-                        </CardContent>
-                    </Card>
+                    <LocoSignals />
                 </TabsContent>
             </Tabs>
           ) : (
