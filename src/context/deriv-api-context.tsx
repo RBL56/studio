@@ -4,6 +4,23 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+export const marketConfig: { [key: string]: { decimals: number } } = {
+    'R_10': { decimals: 3 },
+    'R_25': { decimals: 3 },
+    'R_50': { decimals: 4 },
+    'R_75': { decimals: 4 },
+    'R_100': { decimals: 2 },
+    '1HZ10V': { decimals: 2 },
+    '1HZ25V': { decimals: 2 },
+    '1HZ30V': { decimals: 3 },
+    '1HZ50V': { decimals: 2 },
+    '1HZ75V': { decimals: 2 },
+    '1HZ90V': { decimals: 3 },
+    '1HZ100V': { decimals: 2 },
+    '1HZ150V': { decimals: 2 },
+    '1HZ250V': { decimals: 2 },
+};
+
 interface DerivApiContextType {
   isConnected: boolean;
   token: string | null;
@@ -13,6 +30,7 @@ interface DerivApiContextType {
   disconnect: () => void;
   api: WebSocket | null;
   subscribeToMessages: (handler: (data: any) => void) => () => void;
+  marketConfig: { [key: string]: { decimals: number } };
 }
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
@@ -110,7 +128,6 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       };
       
       socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
         reject(new Error('WebSocket connection error.'));
         setIsConnected(false);
       };
@@ -187,7 +204,8 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       connect,
       disconnect,
       api: ws.current,
-      subscribeToMessages
+      subscribeToMessages,
+      marketConfig
     }}>
       {children}
     </DerivApiContext.Provider>

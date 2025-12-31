@@ -6,25 +6,7 @@ import type { BotConfigurationValues } from '@/components/bot-builder/bot-config
 import type { Trade } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDerivApi } from './deriv-api-context';
-import { UseFormReturn, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-
-const formSchema = z.object({
-  market: z.string().min(1, 'Market is required'),
-  tradeType: z.enum(['matches_differs', 'even_odd', 'over_under']),
-  predictionType: z.enum(['matches', 'differs', 'even', 'odd', 'over', 'under']),
-  lastDigitPrediction: z.coerce.number().min(0).max(9).optional(),
-  initialStake: z.coerce.number().positive('Stake must be positive'),
-  ticks: z.coerce.number().int().min(1, 'Ticks must be at least 1').max(10, 'Ticks cannot exceed 10'),
-  takeProfit: z.coerce.number().positive('Take profit must be positive').optional(),
-  stopLoss: z.coerce.number().positive('Stop loss must be positive').optional(),
-  useMartingale: z.boolean().default(false),
-  martingaleFactor: z.coerce.number().min(1, 'Factor must be at least 1').optional(),
-  useBulkTrading: z.boolean().default(false),
-  bulkTradeCount: z.coerce.number().int().min(1, 'Count must be at least 1').optional(),
-});
-
+import { UseFormReturn } from 'react-hook-form';
 
 export type BotStatus = 'idle' | 'running' | 'stopped';
 
@@ -47,7 +29,7 @@ interface BotContextType {
 const BotContext = createContext<BotContextType | undefined>(undefined);
 
 export const BotProvider = ({ children }: { children: ReactNode }) => {
-  const { api, subscribeToMessages, isConnected } = useDerivApi();
+  const { api, subscribeToMessages, isConnected, marketConfig } = useDerivApi();
   const { toast } = useToast();
 
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -153,11 +135,24 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       parameters,
     }));
   }, [api, stopBot]);
+  
+  const extractLastDigit = useCallback((price: number, market: string) => {
+      const config = marketConfig[market];
+      const decimals = config?.decimals || 2;
+      const formattedPrice = price.toFixed(decimals);
+
+      if (decimals === 0) {
+          return Math.abs(Math.floor(price)) % 10;
+      } else {
+          const priceStr = formattedPrice.replace(/[^0-9]/g, '');
+          const lastChar = priceStr.slice(-1);
+          return parseInt(lastChar);
+      }
+  }, [marketConfig]);
 
   const handleMessage = useCallback((data: any) => {
     if (data.error) {
       if(data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired'){
-        console.error("Deriv API Error:", data.error.message);
         if (openContractsRef.current > 0) {
             openContractsRef.current--;
         }
@@ -192,14 +187,33 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
         openContractsRef.current--;
         
+        // Repurchase immediately for speed
+        const config = configRef.current;
+        if (isRunningRef.current) {
+            if (config?.useBulkTrading) {
+                const completedTrades = bulkTradesCompletedRef.current + 1;
+                const totalTrades = config.bulkTradeCount || 1;
+                if (completedTrades < totalTrades) {
+                    purchaseContract();
+                }
+            } else {
+                purchaseContract();
+            }
+        }
+        
         const isWin = contract.status === 'won';
         const profit = contract.profit;
         const newTotalProfit = totalProfitRef.current + profit;
+        
+        const exitTick = contract.exit_tick;
+        const exitDigit = exitTick ? extractLastDigit(exitTick, contract.underlying) : undefined;
 
         setTrades(prev => prev.map(t => t.id === contract.contract_id.toString() ? {
             ...t,
             payout: contract.payout,
             isWin,
+            exitTick,
+            exitDigit
         } : t));
 
         setTotalProfit(newTotalProfit);
@@ -216,7 +230,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             }
         }
 
-        const config = configRef.current;
         if (config?.takeProfit && newTotalProfit >= config.takeProfit) {
             toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
             stopBot(false);
@@ -236,15 +249,10 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
               toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
               stopBot(false);
             }
-            return;
           }
         }
-
-        if (isRunningRef.current) {
-            purchaseContract();
-        }
     }
-  }, [purchaseContract, stopBot, toast]);
+  }, [purchaseContract, stopBot, toast, extractLastDigit]);
   
   useEffect(() => {
     if (!isConnected) {
