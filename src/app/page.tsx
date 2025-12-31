@@ -13,12 +13,16 @@ import TradeLog from '@/components/bot-builder/trade-log';
 import QuickTradePanel from '@/components/bot-builder/quick-trade-panel';
 import LocoSignals from '@/components/bot-builder/loco-signals';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
   const { connect: connectDigitAnalysis, disconnect: disconnectDigitAnalysis, status: digitAnalysisStatus } = useDigitAnalysis();
+  const [activeTab, setActiveTab] = useState('bot-builder');
 
   const handleTabChange = (value: string) => {
+    setActiveTab(value);
     if (value === 'dcircle') {
       if (digitAnalysisStatus === 'disconnected') {
         connectDigitAnalysis();
@@ -31,7 +35,7 @@ export default function BotBuilderPage() {
   };
 
   return (
-    <div className="container py-4 md:py-8">
+    <div className={cn(activeTab !== 'signal-arena' && 'container', "py-4 md:py-8")}>
       <BotProvider>
           {isConnected ? (
             <Tabs defaultValue="bot-builder" className="w-full" onValueChange={handleTabChange}>
