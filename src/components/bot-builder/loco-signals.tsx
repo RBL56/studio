@@ -172,7 +172,7 @@ const SignalCard = ({ i, executeTrade }: { i: any, executeTrade: (sym: string, t
         if (i.under6 >= 66) { s += 35; r.push("Strong Under 6") }
         else if (i.under6 >= 61) s += 15;
         if (Math.abs(i.even - 50) >= 6) { s += 20; r.push("Strong Even/Odd") }
-        if (i.p_value < .01) { s += 25; r.push("Strong Bias") } // changed from i.p
+        if (i.p_value < .01) { s += 25; r.push("Strong Bias") }
         else if (i.p_value < .05) s += 10;
         const m = Math.max(...i.digits);
         if (m >= 14) { s += 20; r.push(`Hot Digit ${m.toFixed(1)}%`) }
