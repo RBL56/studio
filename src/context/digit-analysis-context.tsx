@@ -23,12 +23,6 @@ const marketConfig: { [key: string]: { decimals: number } } = {
     '1HZ100V': { decimals: 2 }
 };
 
-interface Tick {
-    price: number;
-    digit: number;
-    timestamp: number;
-}
-
 interface DigitAnalysisContextType {
     status: string;
     statusMessage: string;
@@ -176,6 +170,10 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
                 ws.current.send(JSON.stringify({ forget: subscriptionId.current }));
                 subscriptionId.current = null;
             }
+            ws.current.onmessage = null;
+            ws.current.onopen = null;
+            ws.current.onclose = null;
+            ws.current.onerror = null;
             ws.current.close();
             ws.current = null;
         }
@@ -183,9 +181,30 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         setIsCollecting(false);
     }, []);
 
+    const resetData = useCallback(() => {
+        ticksRef.current = new Array(MAX_TICKS);
+        digitCountsRef.current = Array(10).fill(0);
+        currentIndexRef.current = 0;
+        totalTicksProcessedRef.current = 0;
+        setTickCount(0);
+        setPrice('--');
+        setDigitStats(Array(10).fill({ count: 0, percentage: '0.0%' }));
+        setEvenOdd({ even: '0.0%', odd: '0.0%' });
+        setAnalysis({ most: '-', least: '-', avg: '10.0%', dev: '0.0%' });
+        setTickHistory([]);
+    }, []);
+
     const connect = useCallback((market?: string) => {
         const marketToConnect = market || currentMarket;
-        if (ws.current) return;
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            return;
+        }
+
+        if (ws.current) {
+            disconnect();
+        }
+
+        resetData();
         updateStatus('connecting', 'Connecting to Deriv API...');
 
         ws.current = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
@@ -196,6 +215,16 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
         ws.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            
+            if (data.error) {
+                if (data.error.code !== 'AlreadySubscribed') {
+                    const errorMessage = data.error?.message || 'An unknown API error occurred.';
+                    updateStatus('disconnected', `API Error: ${errorMessage}`);
+                    disconnect();
+                }
+                return;
+            }
+
             if (data.history) {
                 const { prices } = data.history;
                 prices.forEach((price: number) => {
@@ -210,56 +239,31 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
                 const newTick = {
                     price: parseFloat(data.tick.quote),
                     digit: extractLastDigit(parseFloat(data.tick.quote), marketToConnect),
-                    timestamp: Date.now()
+                    timestamp: data.tick.epoch * 1000
                 };
                 processTick(newTick, false);
             } else if (data.subscription) {
                 subscriptionId.current = data.subscription.id;
-            } else if (data.error) {
-                const errorMessage = data.error?.message || 'An unknown API error occurred.';
-                updateStatus('disconnected', `API Error: ${errorMessage}`);
-                disconnect();
             }
         };
 
         ws.current.onerror = (error) => {
-            updateStatus('disconnected', 'Connection error');
+            updateStatus('disconnected', 'Connection error. Please try again.');
             disconnect();
         };
 
         ws.current.onclose = () => {
-            updateStatus('disconnected', 'Disconnected. Click Connect to start');
+            if (status !== 'disconnected') {
+              updateStatus('disconnected', 'Disconnected. Click Connect to start');
+            }
             ws.current = null;
         };
-    }, [currentMarket, disconnect, extractLastDigit, fetchHistoricalData, processTick]);
-
-    const resetData = useCallback(() => {
-        ticksRef.current = new Array(MAX_TICKS);
-        digitCountsRef.current = Array(10).fill(0);
-        currentIndexRef.current = 0;
-        totalTicksProcessedRef.current = 0;
-        setTickCount(0);
-        setPrice('--');
-        setDigitStats(Array(10).fill({ count: 0, percentage: '0.0%' }));
-        setEvenOdd({ even: '0.0%', odd: '0.0%' });
-        setAnalysis({ most: '-', least: '-', avg: '10.0%', dev: '0.0%' });
-        setTickHistory([]);
-    }, []);
+    }, [currentMarket, disconnect, extractLastDigit, fetchHistoricalData, processTick, resetData, status]);
     
     const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newMarket = e.target.value;
-        const wasConnected = status !== 'disconnected';
-        
-        if (wasConnected) {
-            disconnect();
-        }
-        
         setCurrentMarket(newMarket);
-        resetData();
-
-        if (wasConnected) {
-            connect(newMarket);
-        }
+        connect(newMarket);
     };
     
     useEffect(() => {
@@ -303,5 +307,3 @@ export const useDigitAnalysis = () => {
     }
     return context;
 };
-
-    
