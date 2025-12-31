@@ -18,7 +18,7 @@ const formSchema = z.object({
   market: z.string().min(1, 'Market is required'),
   tradeType: z.enum(['matches_differs', 'even_odd', 'over_under']),
   predictionType: z.enum(['matches', 'differs', 'even', 'odd', 'over', 'under']),
-  lastDigitPrediction: z.coerce.number().min(0).max(9).optional(),
+  lastDigitPrediction: z.coerce.number().min(0, 'Digit must be between 0-9').max(9, 'Digit must be between 0-9').optional(),
   initialStake: z.coerce.number().positive('Stake must be positive'),
   ticks: z.coerce.number().int().min(1, 'Ticks must be at least 1').max(10, 'Ticks cannot exceed 10'),
   takeProfit: z.coerce.number().positive('Take profit must be positive').optional(),
@@ -36,7 +36,7 @@ export default function BotConfigurationForm() {
 
   const localForm = useForm<BotConfigurationValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: form?.getValues() ?? {
+    defaultValues: {
       market: 'R_100',
       tradeType: 'over_under',
       predictionType: 'over',

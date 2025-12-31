@@ -291,21 +291,21 @@
     border-color: #22c55e !important;
     border-width: 2px;
     box-shadow: 0 0 8px rgba(34, 197, 94, .5);
-    background: rgba(34, 197, 94, 0.05);
+    background: rgba(34, 197, 94, 0.1) !important;
 }
 
 .least-frequent {
     border-color: #ef4444 !important;
     border-width: 2px;
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
-    background: rgba(239, 68, 68, 0.05);
+    background: rgba(239, 68, 68, 0.1) !important;
 }
 
 .second-most-frequent {
     border-color: #3b82f6 !important;
     border-width: 2px;
     box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba(59, 130, 246, 0.1) !important;
 }
 
 .active-digit {
