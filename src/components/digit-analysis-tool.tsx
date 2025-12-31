@@ -4,7 +4,8 @@
 import React from 'react';
 import { Button } from './ui/button';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
-import { MAX_TICKS } from '@/context/digit-analysis-context';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 export function DigitAnalysisTool() {
     const {
@@ -24,6 +25,9 @@ export function DigitAnalysisTool() {
         disconnect,
         handleMarketChange,
         marketConfig,
+        ticksToFetch,
+        setTicksToFetch,
+        maxTicks
     } = useDigitAnalysis();
 
     return (
@@ -36,7 +40,7 @@ export function DigitAnalysisTool() {
 
                 {isCollecting && (
                     <div className="collection-info">
-                        <div className="loading"></div>Collecting historical ticks... <span>{collectedCount}</span>/{MAX_TICKS}
+                        <div className="loading"></div>Collecting historical ticks... <span>{collectedCount}</span>/{ticksToFetch}
                     </div>
                 )}
                 
@@ -47,23 +51,23 @@ export function DigitAnalysisTool() {
                     <Button onClick={disconnect} disabled={status === 'disconnected'} variant="destructive" className="w-full">Disconnect</Button>
                 </div>
 
-                <div className="digit-analysis-stats-row">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
                     <div className="digit-analysis-stat-box">
                         <div className="digit-analysis-stat-value">{price}</div>
                         <div className="digit-analysis-stat-label">Current Price</div>
                     </div>
-                    <div className="digit-analysis-stat-box">
-                        <div className="digit-analysis-stat-value">{tickCount}/{MAX_TICKS}</div>
+                     <div className="digit-analysis-stat-box">
+                        <div className="digit-analysis-stat-value">{tickCount}/{ticksToFetch}</div>
                         <div className="digit-analysis-stat-label">Historical Ticks</div>
                     </div>
                 </div>
 
                 <div className="progress-container">
-                    <div className="progress-bar" style={{ width: `${(tickCount / MAX_TICKS) * 100}%` }}></div>
+                    <div className="progress-bar" style={{ width: `${(tickCount / ticksToFetch) * 100}%` }}></div>
                 </div>
 
                 <div className="info-note">
-                    First collects 5000 historical ticks, then continues with real-time updates
+                    First collects historical ticks, then continues with real-time updates
                 </div>
 
                 <select value={currentMarket} onChange={handleMarketChange} className="digit-analysis-market-select mt-4">
@@ -84,10 +88,22 @@ export function DigitAnalysisTool() {
                         <option value="1HZ100V">Volatility 100 (1s)</option>
                     </optgroup>
                 </select>
+
+                <div className="mt-4">
+                    <Label htmlFor="ticks-input">Ticks to Fetch (Max: {maxTicks})</Label>
+                    <Input
+                        id="ticks-input"
+                        type="number"
+                        value={ticksToFetch}
+                        onChange={(e) => setTicksToFetch(Math.min(Number(e.target.value), maxTicks))}
+                        className="mt-1"
+                        disabled={status !== 'disconnected'}
+                    />
+                </div>
             </div>
             
             <div className="digit-analysis-main-card">
-                <div className="digit-analysis-card-title">Digit Distribution (Last 5000 Ticks)</div>
+                <div className="digit-analysis-card-title">Digit Distribution (Last {ticksToFetch} Ticks)</div>
                 <div className="digits-grid">
                     {digitStats.map((stat, i) => {
                         const p = parseFloat(stat.percentage);
@@ -171,11 +187,9 @@ export function DigitAnalysisTool() {
             </div>
             
             <div className="digit-analysis-footer">
-                Real-time Deriv API Connection • Analysis based on last 5000 historical ticks + real-time updates<br />
+                Real-time Deriv API Connection • Analysis based on last {ticksToFetch} historical ticks + real-time updates<br />
                 Digit 0 is included in even numbers calculation • Technical Differences Fixed
             </div>
         </div>
     );
 }
-
-    
