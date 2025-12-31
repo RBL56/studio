@@ -42,6 +42,12 @@ interface DigitAnalysisContextType {
     marketConfig: { [key: string]: { decimals: number } };
 }
 
+type Tick = {
+    price: number;
+    digit: number;
+    timestamp: number;
+};
+
 const DigitAnalysisContext = createContext<DigitAnalysisContextType | undefined>(undefined);
 
 export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => {
@@ -197,6 +203,14 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const connect = useCallback((market?: string) => {
         const marketToConnect = market || currentMarket;
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+             if (market) {
+                if (subscriptionId.current) {
+                    ws.current.send(JSON.stringify({ forget: subscriptionId.current }));
+                    subscriptionId.current = null;
+                }
+                resetData();
+                fetchHistoricalData(marketToConnect);
+            }
             return;
         }
 
@@ -263,7 +277,9 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newMarket = e.target.value;
         setCurrentMarket(newMarket);
-        connect(newMarket);
+        if (status !== 'disconnected') {
+            connect(newMarket);
+        }
     };
     
     useEffect(() => {
