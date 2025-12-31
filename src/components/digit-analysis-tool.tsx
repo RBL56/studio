@@ -1,10 +1,10 @@
+
 'use client';
 
 import React from 'react';
 import { Button } from './ui/button';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
-
-export const MAX_TICKS = 1000;
+import { MAX_TICKS } from '@/context/digit-analysis-context';
 
 export function DigitAnalysisTool() {
     const {
@@ -63,7 +63,7 @@ export function DigitAnalysisTool() {
                 </div>
 
                 <div className="info-note">
-                    First collects 1000 historical ticks, then continues with real-time updates
+                    First collects 5000 historical ticks, then continues with real-time updates
                 </div>
 
                 <select value={currentMarket} onChange={handleMarketChange} className="digit-analysis-market-select mt-4">
@@ -87,7 +87,7 @@ export function DigitAnalysisTool() {
             </div>
             
             <div className="digit-analysis-main-card">
-                <div className="digit-analysis-card-title">Digit Distribution (Last 1000 Ticks)</div>
+                <div className="digit-analysis-card-title">Digit Distribution (Last 5000 Ticks)</div>
                 <div className="digits-grid">
                     {digitStats.map((stat, i) => {
                         const p = parseFloat(stat.percentage);
@@ -171,9 +171,11 @@ export function DigitAnalysisTool() {
             </div>
             
             <div className="digit-analysis-footer">
-                Real-time Deriv API Connection • Analysis based on last 1000 historical ticks + real-time updates<br />
+                Real-time Deriv API Connection • Analysis based on last 5000 historical ticks + real-time updates<br />
                 Digit 0 is included in even numbers calculation • Technical Differences Fixed
             </div>
         </div>
     );
 }
+
+    

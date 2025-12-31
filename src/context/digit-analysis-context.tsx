@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 
 // ================= CONFIGURATION =================
-const MAX_TICKS = 1000;
+export const MAX_TICKS = 5000;
 const MAX_HISTORY = 20;
 
 // Market configuration
@@ -277,9 +277,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newMarket = e.target.value;
         setCurrentMarket(newMarket);
-        if (status !== 'disconnected') {
-            connect(newMarket);
-        }
+        connect(newMarket);
     };
     
     useEffect(() => {
@@ -323,3 +321,5 @@ export const useDigitAnalysis = () => {
     }
     return context;
 };
+
+    
