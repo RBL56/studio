@@ -37,7 +37,7 @@ interface DigitAnalysisContextType {
     tickHistory: Tick[];
     activeDigit: number | null;
     connect: () => void;
-    disconnect: () => void;
+    disconnect: (silent?: boolean) => void;
     handleMarketChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     marketConfig: { [key: string]: { decimals: number } };
     ticksToFetch: number;
@@ -189,6 +189,8 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         }
         if (!silent) {
             updateStatus('disconnected', 'Disconnected');
+        } else {
+             updateStatus('disconnected', 'Click Connect to start');
         }
         setIsCollecting(false);
     }, []);
@@ -274,8 +276,10 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newMarket = e.target.value;
         setCurrentMarket(newMarket);
-        disconnect(true); // Silently disconnect
-        connect(newMarket); // Connect to the new market
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            disconnect(true); // Silently disconnect
+            connect(newMarket); // Connect to the new market
+        }
     };
     
     useEffect(() => {
@@ -300,7 +304,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         tickHistory,
         activeDigit,
         connect: () => connect(),
-        disconnect: () => disconnect(),
+        disconnect,
         handleMarketChange,
         marketConfig,
         ticksToFetch,

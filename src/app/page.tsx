@@ -12,15 +12,29 @@ import BotStatus from '@/components/bot-builder/bot-status';
 import TradeLog from '@/components/bot-builder/trade-log';
 import QuickTradePanel from '@/components/bot-builder/quick-trade-panel';
 import LocoSignals from '@/components/bot-builder/loco-signals';
+import { useDigitAnalysis } from '@/context/digit-analysis-context';
 
 export default function BotBuilderPage() {
   const { isConnected } = useDerivApi();
+  const { connect: connectDigitAnalysis, disconnect: disconnectDigitAnalysis, status: digitAnalysisStatus } = useDigitAnalysis();
+
+  const handleTabChange = (value: string) => {
+    if (value === 'dcircle') {
+      if (digitAnalysisStatus === 'disconnected') {
+        connectDigitAnalysis();
+      }
+    } else {
+      if (digitAnalysisStatus !== 'disconnected') {
+        disconnectDigitAnalysis();
+      }
+    }
+  };
 
   return (
     <div className="container py-4 md:py-8">
       <BotProvider>
           {isConnected ? (
-            <Tabs defaultValue="bot-builder" className="w-full">
+            <Tabs defaultValue="bot-builder" className="w-full" onValueChange={handleTabChange}>
                 <ScrollArea className="w-full whitespace-nowrap pb-4">
                     <TabsList className="grid w-full grid-cols-4 mb-6 min-w-[700px]">
                         <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
