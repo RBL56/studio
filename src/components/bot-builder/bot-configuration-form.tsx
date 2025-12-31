@@ -45,7 +45,7 @@ export default function BotConfigurationForm() {
       ticks: 1,
       useMartingale: true,
       martingaleFactor: 2.1,
-      useBulkTrading: true,
+      useBulkTrading: false,
       bulkTradeCount: 10,
       takeProfit: 10,
       stopLoss: 50

@@ -144,11 +144,11 @@ export function DigitAnalysisTool() {
                 <div className="analysis-summary">
                     <div className="summary-box">
                         <div className="summary-label">Most Frequent</div>
-                        <div className="summary-value">{analysis.most}</div>
+                        <div className="summary-value" style={{ color: '#22c55e', fontWeight: 'bold' }}>{analysis.most}</div>
                     </div>
                     <div className="summary-box">
                         <div className="summary-label">Least Frequent</div>
-                        <div className="summary-value">{analysis.least}</div>
+                        <div className="summary-value" style={{ color: '#ef4444', fontWeight: 'bold' }}>{analysis.least}</div>
                     </div>
                     <div className="summary-box">
                         <div className="summary-label">Average %</div>
@@ -156,7 +156,7 @@ export function DigitAnalysisTool() {
                     </div>
                     <div className="summary-box">
                         <div className="summary-label">Deviation</div>
-                        <div className="summary-value">{analysis.dev}</div>
+                        <div className="summary-value" style={{ color: '#3b82f6', fontWeight: 'bold' }}>{analysis.dev}</div>
                     </div>
                 </div>
             </div>
