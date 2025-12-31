@@ -24,11 +24,11 @@ export default function BotBuilderPage() {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === 'dcircle') {
-      if (digitAnalysisStatus === 'disconnected') {
+      if (digitAnalysisStatus !== 'connected' && digitAnalysisStatus !== 'connecting' && digitAnalysisStatus !== 'collecting') {
         connectDigitAnalysis();
       }
     } else {
-      if (digitAnalysisStatus !== 'disconnected') {
+      if (digitAnalysisStatus === 'connected' || digitAnalysisStatus === 'connecting' || digitAnalysisStatus === 'collecting') {
         disconnectDigitAnalysis();
       }
     }
