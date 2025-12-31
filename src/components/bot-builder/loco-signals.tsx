@@ -126,6 +126,8 @@ const LocoSignals = () => {
                 .loco-signals .bot-btn.under { background: #aa0000; }
                 .loco-signals .update { text-align: center; color: #00ffaa; font-size: .75em; }
                 .loco-signals footer { text-align: center; margin: 20px 0 10px; color: #666; font-size: .75em; }
+                .loco-signals .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: .8em; text-align: center; margin-top: 8px; }
+                .loco-signals .analysis-item { background: #2a2a2a; padding: 6px; border-radius: 4px; }
                 @media (max-width: 480px) {
                     .loco-signals .stats { grid-template-columns: repeat(2, 1fr); }
                     .loco-signals .bot-buttons { flex-direction: column; }
@@ -166,27 +168,34 @@ const SignalCard = ({ i, executeTrade }: { i: any, executeTrade: (sym: string, t
     const strong = i.over3 >= 66 || i.under6 >= 66;
 
     const calculateConfidence = (i: any) => {
-        let s = 0, r = [];
-        if (i.over3 >= 66) { s += 35; r.push("Strong Over 3") }
+        let s = 0;
+        const r = [];
+        if (i.over3 >= 66) { s += 35; r.push("Strong Over 3"); }
         else if (i.over3 >= 61) s += 15;
-        if (i.under6 >= 66) { s += 35; r.push("Strong Under 6") }
+        if (i.under6 >= 66) { s += 35; r.push("Strong Under 6"); }
         else if (i.under6 >= 61) s += 15;
-        if (Math.abs(i.even - 50) >= 6) { s += 20; r.push("Strong Even/Odd") }
-        if (i.p_value < .01) { s += 25; r.push("Strong Bias") }
-        else if (i.p_value < .05) s += 10;
+        if (Math.abs(i.even - 50) >= 6) { s += 20; r.push("Strong Even/Odd"); }
+        if (i.p_value < 0.01) { s += 25; r.push("Strong Bias"); }
+        else if (i.p_value < 0.05) s += 10;
         const m = Math.max(...i.digits);
-        if (m >= 14) { s += 20; r.push(`Hot Digit ${m.toFixed(1)}%`) }
+        if (m >= 14) { s += 20; r.push(`Hot Digit ${m.toFixed(1)}%`); }
         s = Math.min(100, s);
         let c = "conf-low";
         if (s >= 70) c = "conf-high"; else if (s >= 40) c = "conf-med";
         return { score: s, confClass: c, reasons: r.join(" • ") };
-    }
+    };
+
+    const getPValueInterpretation = (pValue: number) => {
+        if (pValue < 0.01) return <span style={{color: '#ff4444'}}>Strong Bias</span>;
+        if (pValue < 0.05) return <span style={{color: '#ffaa00'}}>Bias Detected</span>;
+        return <span style={{color: '#44ff44'}}>Fair</span>;
+    };
 
     const signalClass = (v: number, b = 60) => {
         if (b === 60) return v >= 66 ? "strong" : v >= 61 ? "moderate" : "weak";
         const d = Math.abs(v - 50);
         return d >= 6 ? "strong" : d >= 3 ? "moderate" : "weak";
-    }
+    };
 
     const conf = calculateConfidence(i);
     let hot = 0;
@@ -201,8 +210,20 @@ const SignalCard = ({ i, executeTrade }: { i: any, executeTrade: (sym: string, t
                 <div className="stat"><strong className={signalClass(i.even, 50)}>{i.even.toFixed(1)}%</strong>E</div>
                 <div className="stat"><strong className={signalClass(100 - i.even, 50)}>{(100 - i.even).toFixed(1)}%</strong>O</div>
             </div>
-            <div className={`confidence ${conf.confClass}`} style={{textAlign: 'center', marginTop: '4px'}}>📊 Confidence: {conf.score}%</div>
-            {conf.score >= 30 && <div style={{ textAlign: 'center', fontSize: '.8em', color: '#aaa' }}>{conf.reasons}</div>}
+
+            <div className="analysis-grid">
+                <div className="analysis-item">
+                    <div>Confidence</div>
+                    <div className={`confidence ${conf.confClass}`} style={{fontWeight: 'bold'}}>{conf.score}%</div>
+                </div>
+                 <div className="analysis-item">
+                    <div>P-Value: {i.p_value.toFixed(4)}</div>
+                    <div>{getPValueInterpretation(i.p_value)}</div>
+                </div>
+            </div>
+
+            {conf.reasons && <div style={{ textAlign: 'center', fontSize: '.8em', color: '#aaa', marginTop: '6px' }}>{conf.reasons}</div>}
+            
             <table>
                 <tbody>
                     <tr>
@@ -215,7 +236,9 @@ const SignalCard = ({ i, executeTrade }: { i: any, executeTrade: (sym: string, t
                     </tr>
                 </tbody>
             </table>
+
             {hot > 0 && <div style={{ textAlign: 'center', color: '#ff4444', fontSize: '.8em' }}>{hot} Hot Digit(s)</div>}
+            
             {strong && (
                 <div className="bot-buttons">
                     {i.over3 >= 66 && <button className="bot-btn over" onClick={() => executeTrade(i.symbol, 'over', i.name)}>🤖 RUN OVER BOT</button>}
