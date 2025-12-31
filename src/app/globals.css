@@ -309,9 +309,11 @@
 }
 
 .active-digit {
-    background: hsla(var(--primary) / 0.2);
+    background: hsla(var(--primary) / 0.2) !important;
     transform: scale(1.05);
     border-color: hsl(var(--primary)) !important;
+    border-width: 2px !important;
+    box-shadow: 0 0 12px hsla(var(--primary) / 0.5);
 }
 
 .digit-zero {
