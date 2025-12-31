@@ -155,7 +155,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         updateDisplay();
     }, [currentMarket, updateDisplay]);
     
-    const fetchHistoricalData = useCallback(async (market: string) => {
+    const fetchHistoricalData = useCallback((market: string) => {
         if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
         setIsCollecting(true);
         updateStatus('collecting', `Collecting historical: 0/${MAX_TICKS}`);
@@ -183,14 +183,15 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         setIsCollecting(false);
     }, []);
 
-    const connect = useCallback(() => {
+    const connect = useCallback((market?: string) => {
+        const marketToConnect = market || currentMarket;
         if (ws.current) return;
         updateStatus('connecting', 'Connecting to Deriv API...');
 
         ws.current = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
         
         ws.current.onopen = () => {
-            fetchHistoricalData(currentMarket);
+            fetchHistoricalData(marketToConnect);
         };
 
         ws.current.onmessage = (event) => {
@@ -198,17 +199,17 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
             if (data.history) {
                 const { prices } = data.history;
                 prices.forEach((price: number) => {
-                    const digit = extractLastDigit(price, currentMarket);
+                    const digit = extractLastDigit(price, marketToConnect);
                     processTick({ price, digit, timestamp: Date.now() }, true);
                 });
                 setCollectedCount(prices.length);
                 setIsCollecting(false);
                 updateStatus('connected', 'Real-time monitoring active');
-                ws.current?.send(JSON.stringify({ ticks: currentMarket, subscribe: 1 }));
+                ws.current?.send(JSON.stringify({ ticks: marketToConnect, subscribe: 1 }));
             } else if (data.tick) {
                 const newTick = {
                     price: parseFloat(data.tick.quote),
-                    digit: extractLastDigit(parseFloat(data.tick.quote), currentMarket),
+                    digit: extractLastDigit(parseFloat(data.tick.quote), marketToConnect),
                     timestamp: Date.now()
                 };
                 processTick(newTick, false);
@@ -247,56 +248,25 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     
     const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newMarket = e.target.value;
+        const wasConnected = status !== 'disconnected';
+        
+        if (wasConnected) {
+            disconnect();
+        }
+        
         setCurrentMarket(newMarket);
         resetData();
-        if (status !== 'disconnected') {
-            disconnect();
-            
-            // Reconnect logic
-            const tempWs = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
-            ws.current = tempWs;
-            
-            updateStatus('connecting', 'Connecting to Deriv API...');
 
-            tempWs.onopen = () => {
-                fetchHistoricalData(newMarket);
-            };
-            tempWs.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.history) {
-                    const { prices } = data.history;
-                    prices.forEach((price: number) => {
-                        const digit = extractLastDigit(price, newMarket);
-                        processTick({ price, digit, timestamp: Date.now() }, true);
-                    });
-                    setCollectedCount(prices.length);
-                    setIsCollecting(false);
-                    updateStatus('connected', 'Real-time monitoring active');
-                    tempWs.send(JSON.stringify({ ticks: newMarket, subscribe: 1 }));
-                } else if (data.tick) {
-                    const newTick = {
-                        price: parseFloat(data.tick.quote),
-                        digit: extractLastDigit(parseFloat(data.tick.quote), newMarket),
-                        timestamp: Date.now()
-                    };
-                    processTick(newTick, false);
-                } else if (data.subscription) {
-                    subscriptionId.current = data.subscription.id;
-                } else if (data.error) {
-                    disconnect();
-                }
-            };
-            tempWs.onerror = () => disconnect();
-            tempWs.onclose = () => {
-                updateStatus('disconnected', 'Disconnected. Click Connect to start');
-                ws.current = null;
-            };
+        if (wasConnected) {
+            connect(newMarket);
         }
     };
     
     useEffect(() => {
         return () => {
-            disconnect();
+            if (ws.current) {
+                disconnect();
+            }
         }
     }, [disconnect]);
     
@@ -313,7 +283,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         analysis,
         tickHistory,
         activeDigit,
-        connect,
+        connect: () => connect(),
         disconnect,
         handleMarketChange,
         marketConfig,
