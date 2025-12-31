@@ -38,9 +38,9 @@ export default function BotConfigurationForm() {
     resolver: zodResolver(formSchema),
     defaultValues: form?.getValues() ?? {
       market: 'R_100',
-      tradeType: 'matches_differs',
-      predictionType: 'differs',
-      lastDigitPrediction: 1,
+      tradeType: 'over_under',
+      predictionType: 'over',
+      lastDigitPrediction: 4,
       initialStake: 1,
       ticks: 1,
       useMartingale: true,
@@ -112,9 +112,17 @@ export default function BotConfigurationForm() {
                   <FormLabel>Trade Type</FormLabel>
                   <Select onValueChange={(value) => {
                       field.onChange(value);
-                      if (value === 'matches_differs') currentForm.setValue('predictionType', 'differs');
-                      if (value === 'even_odd') currentForm.setValue('predictionType', 'odd');
-                      if (value === 'over_under') currentForm.setValue('predictionType', 'over');
+                      if (value === 'matches_differs') {
+                        currentForm.setValue('predictionType', 'differs');
+                        currentForm.setValue('lastDigitPrediction', 1);
+                      }
+                      if (value === 'even_odd') {
+                        currentForm.setValue('predictionType', 'odd');
+                      }
+                      if (value === 'over_under') {
+                        currentForm.setValue('predictionType', 'over');
+                        currentForm.setValue('lastDigitPrediction', 4);
+                      }
                   }} defaultValue={field.value} disabled={isBotRunning}>
                     <FormControl>
                       <SelectTrigger>
