@@ -126,7 +126,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
             dev: `${stdDev.toFixed(1)}%`
         });
 
-    }, [setDigitStats, setEvenOdd, setAnalysis]);
+    }, []);
 
     const processTick = useCallback((tick: Tick, isHistorical: boolean) => {
         const currentTick = ticksRef.current[currentIndexRef.current];
@@ -177,7 +177,18 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
                  updateStatus('collecting', `Collecting historical: ${simulatedTicks}/${MAX_TICKS}`);
             }
         }, 10);
+        return () => clearInterval(interval);
     }, [currentMarket, extractLastDigit, processTick]);
+
+    const disconnect = useCallback(() => {
+        if (ws.current) {
+            if (subscriptionId.current) {
+                ws.current.send(JSON.stringify({ forget: subscriptionId.current }));
+            }
+            ws.current.close();
+            ws.current = null;
+        }
+    }, []);
 
     const connect = useCallback(() => {
         if (ws.current) return;
@@ -185,8 +196,10 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
         ws.current = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
 
+        let historicalInterval: NodeJS.Timeout | null = null;
+        
         ws.current.onopen = () => {
-            simulateHistoricalCollection();
+            historicalInterval = simulateHistoricalCollection();
         };
 
         ws.current.onmessage = (event) => {
@@ -207,25 +220,17 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         };
 
         ws.current.onerror = (error) => {
-            console.error('WebSocket error:', error);
             updateStatus('disconnected', 'Connection error');
+            if (historicalInterval) clearInterval(historicalInterval);
             ws.current = null;
         };
 
         ws.current.onclose = () => {
             updateStatus('disconnected', 'Disconnected');
+            if (historicalInterval) clearInterval(historicalInterval);
             ws.current = null;
         };
     }, [extractLastDigit, processTick, simulateHistoricalCollection]);
-
-    const disconnect = useCallback(() => {
-        if (ws.current) {
-            if (subscriptionId.current) {
-                ws.current.send(JSON.stringify({ forget: subscriptionId.current }));
-            }
-            ws.current.close();
-        }
-    }, []);
 
     const resetData = useCallback(() => {
         ticksRef.current = new Array(MAX_TICKS);
@@ -259,8 +264,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
             clearTimeout(timeout);
             disconnect();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [connect, disconnect, status]);
 
     useEffect(() => {
         if (totalTicksProcessedRef.current % 10 === 0 || tickCount < 100) {
@@ -301,5 +305,3 @@ export const useDigitAnalysis = () => {
     }
     return context;
 };
-
-    
