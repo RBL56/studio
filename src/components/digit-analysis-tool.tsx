@@ -28,11 +28,6 @@ export function DigitAnalysisTool() {
 
     return (
         <div className="digit-analysis-container">
-            <div className="digit-analysis-header">
-                <div className="digit-analysis-title">Deriv Last Digit Analysis</div>
-                <div className="digit-analysis-subtitle">{currentMarket} • Historical + Real-time • Last {MAX_TICKS} ticks</div>
-            </div>
-
             <div className="digit-analysis-main-card">
                 <div className={`digit-analysis-connection-status status-${status}`}>
                     <div className="status-dot"></div>
