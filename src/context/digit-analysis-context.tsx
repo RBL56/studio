@@ -33,7 +33,7 @@ interface DigitAnalysisContextType {
     tickCount: number;
     digitStats: { count: number; percentage: string }[];
     evenOdd: { even: string; odd: string };
-    analysis: { most: string; least: string; avg: string; dev: string };
+    analysis: { most: string; least: string; secondMost: string; avg: string; dev: string };
     tickHistory: Tick[];
     activeDigit: number | null;
     connect: () => void;
@@ -64,7 +64,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const [ticksToFetch, setTicksToFetch] = useState(1000);
     const [digitStats, setDigitStats] = useState(() => Array(10).fill({ count: 0, percentage: '0.0%' }));
     const [evenOdd, setEvenOdd] = useState({ even: '0.0%', odd: '0.0%' });
-    const [analysis, setAnalysis] = useState({ most: '-', least: '-', avg: '10.0%', dev: '0.0%' });
+    const [analysis, setAnalysis] = useState({ most: '-', least: '-', secondMost: '-', avg: '10.0%', dev: '0.0%' });
     const [tickHistory, setTickHistory] = useState<Tick[]>([]);
     const [activeDigit, setActiveDigit] = useState<number | null>(null);
 
@@ -101,14 +101,14 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         const counts = digitCountsRef.current;
         const percentages = counts.map(count => (count / total) * 100);
 
-        let maxPercentage = -1;
-        let maxDigit = 0;
-        let minPercentage = 101;
-        let minDigit = 0;
+        const indexedCounts = counts.map((count, index) => ({ count, index }));
+        indexedCounts.sort((a, b) => b.count - a.count);
+
+        const mostDigit = indexedCounts[0].index.toString();
+        const secondMostDigit = indexedCounts.length > 1 ? indexedCounts[1].index.toString() : '-';
+        const leastDigit = indexedCounts[indexedCounts.length - 1].index.toString();
 
         const newDigitStats = percentages.map((p, i) => {
-            if (p > maxPercentage) { maxPercentage = p; maxDigit = i; }
-            if (p < minPercentage) { minPercentage = p; minDigit = i; }
             return { count: counts[i], percentage: `${p.toFixed(1)}%` };
         });
         
@@ -125,8 +125,9 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         setDigitStats(newDigitStats);
         setEvenOdd({ even: `${evenPercentage.toFixed(1)}%`, odd: `${(100 - evenPercentage).toFixed(1)}%` });
         setAnalysis({
-            most: String(maxDigit),
-            least: String(minDigit),
+            most: mostDigit,
+            least: leastDigit,
+            secondMost: secondMostDigit,
             avg: `${averagePercentage.toFixed(1)}%`,
             dev: `${stdDev.toFixed(1)}%`
         });
@@ -200,7 +201,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         setPrice('--');
         setDigitStats(Array(10).fill({ count: 0, percentage: '0.0%' }));
         setEvenOdd({ even: '0.0%', odd: '0.0%' });
-        setAnalysis({ most: '-', least: '-', avg: '10.0%', dev: '0.0%' });
+        setAnalysis({ most: '-', least: '-', secondMost: '-', avg: '10.0%', dev: '0.0%' });
         setTickHistory([]);
     }, [ticksToFetch]);
 

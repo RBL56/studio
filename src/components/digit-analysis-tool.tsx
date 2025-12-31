@@ -114,11 +114,16 @@ export function DigitAnalysisTool() {
                         else if (p >= 8) barColor = '#60a5fa';
                         else barColor = '#8b5cf6';
 
+                        let boxClass = '';
+                        if (i === Number(analysis.most)) boxClass = 'most-frequent';
+                        if (i === Number(analysis.least)) boxClass = 'least-frequent';
+                        if (i === Number(analysis.secondMost)) boxClass = 'second-most-frequent';
+                        if (i === activeDigit) boxClass += ' active-digit';
+                        if (i === 0) boxClass += ' digit-zero';
+
+
                         return (
-                            <div key={i} className={`digit-box 
-                                ${i === 0 ? 'digit-zero' : ''} 
-                                ${i === Number(analysis.most) ? 'most-frequent' : ''}
-                                ${i === activeDigit ? 'active-digit' : ''}`}>
+                            <div key={i} className={`digit-box ${boxClass}`}>
                                 <div className="digit">{i}</div>
                                 <div className="percentage">{stat.percentage}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'hsl(var(--muted-foreground))' }}>{stat.count}</div>
@@ -151,12 +156,12 @@ export function DigitAnalysisTool() {
                         <div className="summary-value" style={{ color: '#ef4444', fontWeight: 'bold' }}>{analysis.least}</div>
                     </div>
                     <div className="summary-box">
-                        <div className="summary-label">Average %</div>
-                        <div className="summary-value">{analysis.avg}</div>
+                        <div className="summary-label">Second Most Frequent</div>
+                        <div className="summary-value" style={{ color: '#3b82f6', fontWeight: 'bold' }}>{analysis.secondMost}</div>
                     </div>
                     <div className="summary-box">
-                        <div className="summary-label">Deviation</div>
-                        <div className="summary-value" style={{ color: '#3b82f6', fontWeight: 'bold' }}>{analysis.dev}</div>
+                        <div className="summary-label">Average %</div>
+                        <div className="summary-value">{analysis.avg}</div>
                     </div>
                 </div>
             </div>
