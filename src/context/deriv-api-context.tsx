@@ -27,6 +27,7 @@ interface Account {
   currency: string;
   balance: number;
   token: string;
+  is_disabled?: 0 | 1;
 }
 
 interface DerivApiContextType {
@@ -78,10 +79,13 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (data.msg_type === 'balance' && data.balance.accounts) {
-        const updatedBalance = data.balance.accounts[data.balance.loginid]?.balance;
-        if(updatedBalance !== undefined) {
-            setActiveAccount(prev => prev ? {...prev, balance: updatedBalance} : null);
+    if (data.msg_type === 'balance') {
+        const balanceData = data.balance;
+        const loginid = balanceData.loginid;
+        const updatedBalance = balanceData.balance;
+
+        if (loginid === activeAccount?.loginid && updatedBalance !== undefined) {
+          setActiveAccount(prev => prev ? { ...prev, balance: updatedBalance } : null);
         }
     }
 
@@ -137,13 +141,15 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                   };
 
                   if (isInitialConnect) {
-                    const allAccounts = data.authorize.account_list.map((acc: any) => {
-                        const loginid = acc.loginid;
-                        const correspondingToken = accountsRef.current.get(loginid)?.token;
-                        return {
-                            ...acc,
-                            token: correspondingToken || (loginid === authorizedAccount.loginid ? token : ''),
-                        };
+                    const allAccounts = data.authorize.account_list
+                        .filter((acc: any) => !acc.is_disabled)
+                        .map((acc: any) => {
+                            const loginid = acc.loginid;
+                            const correspondingToken = accountsRef.current.get(loginid)?.token;
+                            return {
+                                ...acc,
+                                token: correspondingToken || (loginid === authorizedAccount.loginid ? token : ''),
+                            };
                     });
                     
                     allAccounts.forEach((acc: Account) => accountsRef.current.set(acc.loginid, acc));
@@ -157,7 +163,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
                   const session = { activeLoginid: authorizedAccount.loginid, accounts: Array.from(accountsRef.current.values()) };
                   localStorage.setItem('deriv_session', encode(session));
 
-                  socket.send(JSON.stringify({ balance: 1, subscribe: 1, account: 'all' }));
+                  socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
                   socket.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
                   
                   // Clean up these specific listeners after authorization
@@ -191,7 +197,8 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       }
       socket.addEventListener('message', onMessage);
     });
-  }, [handleGlobalMessage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const connect = useCallback(async (token: string) => {
     try {
