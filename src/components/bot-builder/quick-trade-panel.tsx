@@ -5,14 +5,16 @@ import { useBot } from '@/context/bot-context';
 import { Play, Pause, RotateCcw, Bot } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '../ui/badge';
 
 export default function QuickTradePanel() {
   const { startBot, stopBot, resetStats, isBotRunning, form } = useBot();
   const { toast } = useToast();
 
+  const config = form?.getValues();
+
   const handleStart = () => {
-    if (form) {
-      const config = form.getValues();
+    if (config) {
       startBot(config);
     } else {
         toast({
@@ -23,6 +25,22 @@ export default function QuickTradePanel() {
     }
   };
 
+  const renderEntryPointInfo = () => {
+    if (!config || !config.useEntryPoint) {
+      return <Badge variant="secondary">Not Set</Badge>;
+    }
+    
+    if (config.entryPointType === 'single') {
+      return <Badge variant="outline">Single Digit: {config.entryRangeStart}</Badge>;
+    }
+
+    if (config.entryPointType === 'consecutive') {
+      return <Badge variant="outline">Consecutive Range: {config.entryRangeStart} - {config.entryRangeEnd}</Badge>
+    }
+
+    return null;
+  }
+
   return (
     <Card>
         <CardHeader>
@@ -32,9 +50,15 @@ export default function QuickTradePanel() {
             </CardTitle>
         </CardHeader>
         <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-                Use the bot configuration from the &apos;Bot Builder&apos; tab to quickly start or stop trading.
-            </p>
+            <div className="text-sm text-muted-foreground mb-4 space-y-2">
+                <p>
+                    Use the bot configuration from the &apos;Bot Builder&apos; tab to quickly start or stop trading.
+                </p>
+                <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground">Entry Spot:</span>
+                    {renderEntryPointInfo()}
+                </div>
+            </div>
             <div className="grid grid-cols-3 gap-2">
                 <Button onClick={handleStart} disabled={isBotRunning} className="w-full">
                     <Play className="mr-2 h-4 w-4" /> Start
