@@ -5,7 +5,7 @@ export type Strategy = {
 };
 
 export type Trade = {
-    id: string;
+    id: number;
     description: string;
     marketId: string;
     stake: number;

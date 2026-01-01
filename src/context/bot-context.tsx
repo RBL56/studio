@@ -53,7 +53,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const isRunningRef = useRef(false);
   const totalProfitRef = useRef(0);
   const bulkTradesCompletedRef = useRef(0);
-  const openContractsRef = useRef(new Map<string, number>());
+  const openContractsRef = useRef(new Map<number, number>());
   const tradeLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -174,9 +174,9 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     
     if (data.msg_type === 'buy') {
         if(data.buy.contract_id){
-            openContractsRef.current.set(data.buy.contract_id.toString(), data.buy.buy_price);
+            openContractsRef.current.set(data.buy.contract_id, data.buy.buy_price);
             const newTrade: Trade = {
-                id: data.buy.contract_id.toString(),
+                id: data.buy.contract_id,
                 description: data.buy.longcode,
                 marketId: configRef.current?.market || '',
                 stake: data.buy.buy_price,
@@ -191,7 +191,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
     if (data.msg_type === 'proposal_open_contract' && data.proposal_open_contract?.contract_id) {
         const contract = data.proposal_open_contract;
-        const contractId = contract.contract_id.toString();
+        const contractId = contract.contract_id;
 
         if (!openContractsRef.current.has(contractId)) return;
         if (!contract.is_sold) return;
