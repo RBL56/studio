@@ -46,7 +46,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const isRunningRef = useRef(false);
   const totalProfitRef = useRef(0);
   const bulkTradesCompletedRef = useRef(0);
-  const openContractsRef = useRef(0);
+  const openContractsRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     totalProfitRef.current = totalProfit;
@@ -80,6 +80,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     setTotalWins(0);
     setTotalLosses(0);
     bulkTradesCompletedRef.current = 0;
+    openContractsRef.current.clear();
     toast({
         title: 'Stats Reset',
         description: 'The trade log and statistics have been cleared.',
@@ -104,19 +105,18 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
     
-    if (!isRunningRef.current && openContractsRef.current === 0) {
+    if (!isRunningRef.current && openContractsRef.current.size === 0) {
         return;
     }
 
     const config = configRef.current;
-    const stake = currentStakeRef.current;
     
     setBotStatus('running');
 
     const contractType = getContractType(config.predictionType);
 
     const parameters: any = {
-      amount: stake,
+      amount: currentStakeRef.current,
       basis: "stake",
       contract_type: contractType,
       currency: "USD",
@@ -131,7 +131,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
     api.send(JSON.stringify({
       buy: "1",
-      price: stake,
+      price: currentStakeRef.current,
       parameters,
     }));
   }, [api, stopBot]);
@@ -153,8 +153,9 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const handleMessage = useCallback((data: any) => {
     if (data.error) {
       if(data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired'){
-        if (openContractsRef.current > 0) {
-            openContractsRef.current--;
+        if (openContractsRef.current.size > 0) {
+            const firstContract = openContractsRef.current.keys().next().value;
+            if (firstContract) openContractsRef.current.delete(firstContract);
         }
         if (isRunningRef.current && !configRef.current?.useBulkTrading) {
             stopBot(false);
@@ -165,7 +166,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     
     if (data.msg_type === 'buy') {
         if(data.buy.contract_id){
-            openContractsRef.current++;
+            openContractsRef.current.set(data.buy.contract_id.toString(), data.buy.buy_price);
             const newTrade: Trade = {
                 id: data.buy.contract_id.toString(),
                 description: data.buy.longcode,
@@ -181,13 +182,15 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (data.msg_type === 'proposal_open_contract' && data.proposal_open_contract?.contract_id) {
-        if (!isRunningRef.current && openContractsRef.current === 0) return;
         const contract = data.proposal_open_contract;
+        const contractId = contract.contract_id.toString();
+
+        if (!openContractsRef.current.has(contractId)) return;
         if (!contract.is_sold) return;
 
-        openContractsRef.current--;
+        const stake = openContractsRef.current.get(contractId) || 0;
+        openContractsRef.current.delete(contractId);
         
-        // Repurchase immediately for speed
         const config = configRef.current;
         if (isRunningRef.current) {
             if (config?.useBulkTrading) {
@@ -208,7 +211,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const exitTick = contract.exit_tick;
         const exitDigit = exitTick ? extractLastDigit(exitTick, contract.underlying) : undefined;
 
-        setTrades(prev => prev.map(t => t.id === contract.contract_id.toString() ? {
+        setTrades(prev => prev.map(t => t.id === contractId ? {
             ...t,
             payout: contract.payout,
             isWin,
@@ -226,7 +229,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         } else {
             setTotalLosses(prev => prev + 1);
             if (configRef.current?.useMartingale) {
-                currentStakeRef.current *= (configRef.current.martingaleFactor || 2);
+                 currentStakeRef.current = stake * (configRef.current.martingaleFactor || 2.1);
             }
         }
 
@@ -245,7 +248,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         if (config?.useBulkTrading) {
           bulkTradesCompletedRef.current += 1;
           if (bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
-            if (openContractsRef.current === 0) {
+            if (openContractsRef.current.size === 0) {
               toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
               stopBot(false);
             }
@@ -279,14 +282,15 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     configRef.current = config;
     currentStakeRef.current = config.initialStake;
     bulkTradesCompletedRef.current = 0;
-    openContractsRef.current = 0;
+    openContractsRef.current.clear();
     
     isRunningRef.current = true;
     setBotStatus('running');
     
     if (config.useBulkTrading) {
       const tradeCount = config.bulkTradeCount || 1;
-      for (let i = 0; i < Math.min(tradeCount, 10); i++) {
+      const concurrentTrades = Math.min(tradeCount, 10);
+      for (let i = 0; i < concurrentTrades; i++) {
         purchaseContract();
       }
     } else {
@@ -324,3 +328,5 @@ export const useBot = () => {
   }
   return context;
 };
+
+    
