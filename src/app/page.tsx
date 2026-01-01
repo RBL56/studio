@@ -42,10 +42,10 @@ function BotBuilderContent() {
   };
 
   return (
-    <div className={cn("py-4 md:py-8 px-4")}>
+    <div className={cn("py-4 md:py-8 md:px-4")}>
         {isConnected ? (
           <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
-              <ScrollArea className="w-full whitespace-nowrap pb-4">
+              <ScrollArea className="w-full whitespace-nowrap pb-4 px-4 md:px-0">
                   <TabsList className="grid w-full grid-cols-4 mb-6 min-w-[700px]">
                       <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                       <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
@@ -54,7 +54,7 @@ function BotBuilderContent() {
                   </TabsList>
               </ScrollArea>
               
-              <TabsContent value="bot-builder">
+              <TabsContent value="bot-builder" className="px-4 md:px-0">
                   <Tabs value={activeBuilderTab} className="w-full" onValueChange={setActiveBuilderTab}>
                       <TabsList className="grid w-full grid-cols-2 mb-6">
                           <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
@@ -86,7 +86,7 @@ function BotBuilderContent() {
                   </Tabs>
               </TabsContent>
 
-              <TabsContent value="dcircle">
+              <TabsContent value="dcircle" className="px-4 md:px-0">
                 <ScrollArea className="h-[calc(100vh-200px)] md:h-[calc(100vh-250px)]">
                   <div className="space-y-8 pr-4">
                       <QuickTradePanel />
@@ -95,7 +95,7 @@ function BotBuilderContent() {
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="trading-view">
+              <TabsContent value="trading-view" className="px-4 md:px-0">
                   <div className="space-y-8">
                       <QuickTradePanel />
                       <div className="w-full rounded-md overflow-hidden border h-[70vh]">
@@ -113,7 +113,7 @@ function BotBuilderContent() {
               </TabsContent>
           </Tabs>
         ) : (
-          <Card className="h-full flex flex-col justify-center items-center text-center py-16">
+          <Card className="h-full flex flex-col justify-center items-center text-center py-16 mx-4 md:mx-0">
               <CardHeader>
                   <div className="mx-auto bg-destructive/10 rounded-full p-3 w-fit mb-4">
                       <ShieldAlert className="h-8 w-8 text-destructive" />
