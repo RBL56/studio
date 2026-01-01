@@ -45,10 +45,10 @@ export function DigitAnalysisTool() {
                 )}
                 
                 <div className="digit-analysis-controls">
-                    <Button onClick={connect} disabled={status !== 'disconnected'} className="w-full">
+                    <Button onClick={() => connect()} disabled={status !== 'disconnected'} className="w-full">
                         {status === 'connecting' ? <><div className="loading"></div>Connecting...</> : 'Connect'}
                     </Button>
-                    <Button onClick={disconnect} disabled={status === 'disconnected'} variant="destructive" className="w-full">Disconnect</Button>
+                    <Button onClick={() => disconnect()} disabled={status === 'disconnected'} variant="destructive" className="w-full">Disconnect</Button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
@@ -193,3 +193,5 @@ export function DigitAnalysisTool() {
         </div>
     );
 }
+
+    
