@@ -62,7 +62,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const [currentMarket, setCurrentMarket] = useState('R_100');
     const [price, setPrice] = useState('--');
     const [tickCount, setTickCount] = useState(0);
-    const [ticksToFetch, setTicksToFetch] = useState(1000);
+    const [ticksToFetch, setTicksToFetch] = useState(100);
     const [digitStats, setDigitStats] = useState(() => Array(10).fill({ count: 0, percentage: '0.0%' }));
     const [evenOdd, setEvenOdd] = useState({ even: '0.0%', odd: '0.0%' });
     const [analysis, setAnalysis] = useState({ most: '-', least: '-', secondMost: '-', avg: '10.0%', dev: '0.0%' });
