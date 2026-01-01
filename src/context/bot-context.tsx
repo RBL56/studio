@@ -35,6 +35,37 @@ interface BotContextType {
 
 const BotContext = createContext<BotContextType | undefined>(undefined);
 
+const playSound = (type: 'tp' | 'sl') => {
+    try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+
+        if (type === 'tp') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.2);
+        } else { // 'sl'
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.2);
+        }
+        
+        oscillator.start(audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.3);
+        oscillator.stop(audioContext.currentTime + 0.3);
+        
+    } catch(e) {
+        console.error("Could not play sound", e);
+    }
+};
+
 export const BotProvider = ({ children }: { children: ReactNode }) => {
   const { api, subscribeToMessages, isConnected, marketConfig } = useDerivApi();
   const { toast } = useToast();
@@ -254,18 +285,26 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
         // --- Fast-track next trade ---
         let shouldStop = false;
+        let stopReason: 'tp' | 'sl' | null = null;
+        
         if (config?.takeProfit && totalProfitRef.current >= config.takeProfit) {
             toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
             shouldStop = true;
+            stopReason = 'tp';
         } else if (config?.stopLossType === 'amount' && config.stopLossAmount && totalProfitRef.current <= -config.stopLossAmount) {
             toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss amount limit." });
             shouldStop = true;
+            stopReason = 'sl';
         } else if (config?.stopLossType === 'consecutive_losses' && config.stopLossConsecutive && consecutiveLossesRef.current >= config.stopLossConsecutive) {
             toast({ title: "Stop-Loss Hit", description: `Bot stopped after ${config.stopLossConsecutive} consecutive losses.` });
             shouldStop = true;
+            stopReason = 'sl';
         }
 
         if (shouldStop) {
+            if (stopReason) {
+                playSound(stopReason);
+            }
             stopBot(false);
             return;
         }
@@ -421,4 +460,6 @@ export const useBot = () => {
 
     
     
+    
+
     
