@@ -98,7 +98,14 @@ export default function BotBuilderPage() {
                 </TabsContent>
                 
                 <TabsContent value="signal-arena">
-                    <LocoSignals />
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Signal Arena</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>This area has been cleared as requested.</p>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
           ) : (
