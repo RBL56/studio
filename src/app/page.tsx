@@ -88,17 +88,20 @@ export default function BotBuilderPage() {
                 </TabsContent>
 
                 <TabsContent value="trading-view">
-                    <div className="w-full rounded-md overflow-hidden border h-[70vh]">
-                        <iframe
-                            src="https://charts.deriv.com"
-                            className="w-full h-full"
-                            title="Deriv TradingView Chart"
-                        />
+                    <div className="space-y-8">
+                        <QuickTradePanel />
+                        <div className="w-full rounded-md overflow-hidden border h-[70vh]">
+                            <iframe
+                                src="https://charts.deriv.com"
+                                className="w-full h-full"
+                                title="Deriv TradingView Chart"
+                            />
+                        </div>
                     </div>
                 </TabsContent>
                 
                 <TabsContent value="signal-arena">
-                    <LocoSignals />
+                  <LocoSignals />
                 </TabsContent>
             </Tabs>
           ) : (
