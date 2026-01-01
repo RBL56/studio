@@ -170,9 +170,7 @@ const SignalArena = () => {
   useEffect(() => {
     if (!api || !isConnected) return;
 
-    const currentSubscriptions = subscribedSymbols.current;
-    const symbolsToSubscribe = new Set(visibleSymbols.filter(s => !currentSubscriptions.has(s)));
-    const symbolsToUnsubscribe = new Set([...currentSubscriptions].filter(s => !visibleSymbols.includes(s)));
+    const symbolsToSubscribe = new Set(visibleSymbols.filter(s => !subscribedSymbols.current.has(s)));
 
     symbolsToSubscribe.forEach(symbol => {
       api.send(JSON.stringify({
@@ -183,17 +181,6 @@ const SignalArena = () => {
         subscribe: 1
       }));
       subscribedSymbols.current.add(symbol);
-    });
-
-    symbolsToUnsubscribe.forEach(symbol => {
-      const subId = subscriptionIds.current[symbol];
-      if (subId) {
-        api.send(JSON.stringify({ forget: subId }));
-        delete subscriptionIds.current[symbol];
-      }
-      subscribedSymbols.current.delete(symbol);
-      setTickData(prev => { const next = {...prev}; delete next[symbol]; return next; });
-      setAnalysisData(prev => { const next = {...prev}; delete next[symbol]; return next; });
     });
 
   }, [visibleSymbols, api, isConnected]);
@@ -239,7 +226,7 @@ const SignalArena = () => {
   useEffect(() => {
       const interval = setInterval(() => {
           const updatedAnalysis: { [key: string]: any } = {};
-          for (const symbol of visibleSymbols) {
+          for (const symbol of subscribedSymbols.current) {
               const digits = tickData[symbol];
               if (digits) {
                   const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol].name);
@@ -253,7 +240,7 @@ const SignalArena = () => {
       }, 1000); // Analyze every 1 second
 
       return () => clearInterval(interval);
-  }, [tickData, visibleSymbols]);
+  }, [tickData]);
 
   useEffect(() => {
     filterAndSortData();
@@ -451,7 +438,5 @@ const SignalArena = () => {
 };
 
 export default SignalArena;
-
-    
 
     
