@@ -36,7 +36,7 @@ interface DerivApiContextType {
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
 
 // This is your application's unique ID from Deriv. It's loaded from the .env file.
-const APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+const APP_ID = '106684';
 
 // Simple obfuscation for the token in local storage
 const encode = (str: string) => btoa(str);

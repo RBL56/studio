@@ -19,7 +19,7 @@ import {
 import { ThemeToggle } from './theme-toggle';
 
 // This is your application's unique ID from Deriv.
-const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+const DERIV_APP_ID = '106684';
 
 export default function Header() {
   const { isConnected } = useDerivApi();
