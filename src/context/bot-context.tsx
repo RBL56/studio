@@ -213,25 +213,23 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const isWin = contract.status === 'won';
         
         const currentStake = contractInfo.stake;
+        let nextStake = config ? config.initialStake : 1;
 
         if (isWin) {
-            setTotalWins(prev => prev + 1);
             consecutiveLossesRef.current = 0;
-            if(config) {
-                currentStakeRef.current = config.initialStake;
-            }
+            setTotalWins(prev => prev + 1);
         } else {
-            setTotalLosses(prev => prev + 1);
             consecutiveLossesRef.current += 1;
             if (config?.useMartingale && config.martingaleFactor) {
-                currentStakeRef.current = currentStake * config.martingaleFactor;
-            } else if (config) {
-                currentStakeRef.current = config.initialStake;
+                nextStake = currentStake * config.martingaleFactor;
             }
+            setTotalLosses(prev => prev + 1);
         }
+        currentStakeRef.current = nextStake;
         
         const profit = contract.profit;
-        const newTotalProfit = totalProfitRef.current + profit;
+        totalProfitRef.current += profit;
+        setTotalProfit(totalProfitRef.current);
         
         const entryTick = contract.entry_tick;
         const entryDigit = entryTick ? extractLastDigit(entryTick, contract.underlying) : undefined;
@@ -254,26 +252,24 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             return newTrades;
         });
 
-        setTotalProfit(newTotalProfit);
-
-        if (config?.takeProfit && newTotalProfit >= config.takeProfit) {
+        // --- Fast-track next trade ---
+        let shouldStop = false;
+        if (config?.takeProfit && totalProfitRef.current >= config.takeProfit) {
             toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
-            stopBot(false);
-            return;
-        }
-
-        if (config?.stopLossType === 'amount' && config.stopLossAmount && newTotalProfit <= -config.stopLossAmount) {
+            shouldStop = true;
+        } else if (config?.stopLossType === 'amount' && config.stopLossAmount && totalProfitRef.current <= -config.stopLossAmount) {
             toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss amount limit." });
+            shouldStop = true;
+        } else if (config?.stopLossType === 'consecutive_losses' && config.stopLossConsecutive && consecutiveLossesRef.current >= config.stopLossConsecutive) {
+            toast({ title: "Stop-Loss Hit", description: `Bot stopped after ${config.stopLossConsecutive} consecutive losses.` });
+            shouldStop = true;
+        }
+
+        if (shouldStop) {
             stopBot(false);
             return;
         }
 
-        if (config?.stopLossType === 'consecutive_losses' && config.stopLossConsecutive && consecutiveLossesRef.current >= config.stopLossConsecutive) {
-            toast({ title: "Stop-Loss Hit", description: `Bot stopped after ${config.stopLossConsecutive} consecutive losses.` });
-            stopBot(false);
-            return;
-        }
-        
         if (isRunningRef.current) {
             if (config?.useBulkTrading) {
                 const completedTrades = bulkTradesCompletedRef.current + 1;
@@ -423,5 +419,6 @@ export const useBot = () => {
   return context;
 };
 
+    
     
     
