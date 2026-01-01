@@ -2,12 +2,12 @@
 
 import { useBot } from '@/context/bot-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, BadgeDollarSign, TrendingUp, TrendingDown, Target, HelpCircle } from 'lucide-react';
+import { BarChart, BadgeDollarSign, TrendingUp, TrendingDown, Target, HelpCircle, Hourglass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 
 export default function BotStatus() {
-  const { totalProfit, totalStake, totalRuns, totalWins, totalLosses, isBotRunning } = useBot();
+  const { totalProfit, totalStake, totalRuns, totalWins, totalLosses, isBotRunning, botStatus } = useBot();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -29,6 +29,24 @@ export default function BotStatus() {
       {value === null ? <Skeleton className="h-7 w-24 mt-1" /> : <p className={cn("text-2xl font-bold font-mono", color)}>{isCurrency ? formatCurrency(value) : value}</p>}
     </div>
   );
+
+  const getStatusText = () => {
+    if (botStatus === 'waiting') return 'Waiting...';
+    if (isBotRunning) return 'Running';
+    return 'Stopped';
+  }
+
+  const getStatusColor = () => {
+    if (botStatus === 'waiting') return 'text-yellow-500 animate-pulse';
+    if (isBotRunning) return 'text-green-500 animate-pulse';
+    return 'text-red-500';
+  }
+
+  const getStatusIcon = () => {
+    if (botStatus === 'waiting') return <Hourglass className="h-4 w-4" />;
+    return <HelpCircle className="h-4 w-4" />;
+  }
+
 
   return (
     <Card>
@@ -74,14 +92,14 @@ export default function BotStatus() {
           />
            <div className="flex flex-col gap-1 rounded-lg bg-background p-4">
                 <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <HelpCircle className="h-4 w-4" />
+                    {getStatusIcon()}
                     Status
                 </p>
                 <p className={cn(
                     "text-2xl font-bold font-mono",
-                    isBotRunning ? 'text-green-500 animate-pulse' : 'text-red-500'
+                    getStatusColor()
                 )}>
-                    {isBotRunning ? 'Running' : 'Stopped'}
+                    {getStatusText()}
                 </p>
             </div>
         </div>

@@ -36,13 +36,14 @@ interface DigitAnalysisContextType {
     analysis: { most: string; least: string; secondMost: string; avg: string; dev: string };
     tickHistory: Tick[];
     activeDigit: number | null;
-    connect: () => void;
+    connect: (market?: string) => void;
     disconnect: (silent?: boolean) => void;
     handleMarketChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     marketConfig: { [key: string]: { decimals: number } };
     ticksToFetch: number;
     setTicksToFetch: (ticks: number) => void;
     maxTicks: number;
+    lastDigits: number[];
 }
 
 type Tick = {
@@ -67,6 +68,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const [analysis, setAnalysis] = useState({ most: '-', least: '-', secondMost: '-', avg: '10.0%', dev: '0.0%' });
     const [tickHistory, setTickHistory] = useState<Tick[]>([]);
     const [activeDigit, setActiveDigit] = useState<number | null>(null);
+    const [lastDigits, setLastDigits] = useState<number[]>([]);
 
     const ws = useRef<WebSocket | null>(null);
     const subscriptionId = useRef<string | null>(null);
@@ -141,6 +143,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
         ticksRef.current[currentIndexRef.current] = tick;
         digitCountsRef.current[tick.digit]++;
+        setLastDigits(prev => [...prev.slice(-10), tick.digit]);
         
         if (totalTicksProcessedRef.current < ticksToFetch) {
             totalTicksProcessedRef.current++;
@@ -206,10 +209,16 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         setEvenOdd({ even: '0.0%', odd: '0.0%' });
         setAnalysis({ most: '-', least: '-', secondMost: '-', avg: '10.0%', dev: '0.0%' });
         setTickHistory([]);
+        setLastDigits([]);
     }, [ticksToFetch]);
 
     const connect = useCallback((market = currentMarket) => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            if (subscriptionId.current) {
+                ws.current.send(JSON.stringify({ forget: subscriptionId.current }));
+            }
+            ws.current.send(JSON.stringify({ ticks: market, subscribe: 1 }));
+            setCurrentMarket(market);
             return;
         }
 
@@ -218,6 +227,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         }
 
         resetData();
+        setCurrentMarket(market);
         updateStatus('connecting', 'Connecting to Deriv API...');
 
         ws.current = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
@@ -240,10 +250,13 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
             if (data.history) {
                 const { prices } = data.history;
+                const newDigits: number[] = [];
                 prices.forEach((price: number) => {
                     const digit = extractLastDigit(price, market);
+                    newDigits.push(digit);
                     processTick({ price, digit, timestamp: Date.now() }, true);
                 });
+                setLastDigits(prev => [...prev, ...newDigits].slice(-10));
                 setCollectedCount(prices.length);
                 setIsCollecting(false);
                 updateStatus('connected', 'Real-time monitoring active');
@@ -275,10 +288,11 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     
     const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newMarket = e.target.value;
-        setCurrentMarket(newMarket);
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             disconnect(true); // Silently disconnect
             connect(newMarket); // Connect to the new market
+        } else {
+            setCurrentMarket(newMarket);
         }
     };
     
@@ -303,13 +317,14 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         analysis,
         tickHistory,
         activeDigit,
-        connect: () => connect(),
+        connect,
         disconnect,
         handleMarketChange,
         marketConfig,
         ticksToFetch,
         setTicksToFetch,
-        maxTicks: MAX_TICKS_API_LIMIT
+        maxTicks: MAX_TICKS_API_LIMIT,
+        lastDigits,
     };
 
     return (

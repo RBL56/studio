@@ -7,8 +7,9 @@ import type { Trade } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDerivApi } from './deriv-api-context';
 import { UseFormReturn } from 'react-hook-form';
+import { useDigitAnalysis } from './digit-analysis-context';
 
-export type BotStatus = 'idle' | 'running' | 'stopped';
+export type BotStatus = 'idle' | 'running' | 'stopped' | 'waiting';
 
 interface BotContextType {
   trades: Trade[];
@@ -36,6 +37,7 @@ const BotContext = createContext<BotContextType | undefined>(undefined);
 export const BotProvider = ({ children }: { children: ReactNode }) => {
   const { api, subscribeToMessages, isConnected, marketConfig } = useDerivApi();
   const { toast } = useToast();
+  const { lastDigits, connect: connectDigit, disconnect: disconnectDigit, status: digitStatus } = useDigitAnalysis();
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [botStatus, setBotStatus] = useState<BotStatus>('idle');
@@ -61,16 +63,21 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   }, [totalProfit]);
   
   const stopBot = useCallback((showToast = true) => {
-    if (!isRunningRef.current) return;
+    if (!isRunningRef.current && botStatus === 'idle') return;
     isRunningRef.current = false;
     setBotStatus('stopped');
+
+    if(digitStatus !== 'disconnected') {
+      disconnectDigit(true);
+    }
+
     if (showToast) {
         toast({
             title: "Bot Stopped",
             description: "The trading bot has been stopped.",
         });
     }
-  }, [toast]);
+  }, [toast, botStatus, digitStatus, disconnectDigit]);
 
   const resetStats = useCallback(() => {
     if (isRunningRef.current) {
@@ -209,8 +216,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             }
         } else {
             setTotalLosses(prev => prev + 1);
-            if (config?.useMartingale) {
-                currentStakeRef.current = stake * (config.martingaleFactor || 2.1);
+            if (config?.useMartingale && config.martingaleFactor) {
+                currentStakeRef.current = stake * config.martingaleFactor;
             } else if (config) {
                 currentStakeRef.current = config.initialStake;
             }
@@ -299,27 +306,54 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     openContractsRef.current.clear();
     
     isRunningRef.current = true;
-    setBotStatus('running');
-
+    
     setActiveTab('bot-builder');
     setActiveBuilderTab('speedbot');
 
     setTimeout(() => {
       tradeLogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
-    
-    if (config.useBulkTrading) {
-      const tradeCount = config.bulkTradeCount || 1;
-      const concurrentTrades = Math.min(tradeCount, 10);
-      for (let i = 0; i < concurrentTrades; i++) {
-        purchaseContract();
+
+    if (config.useEntryPoint) {
+      setBotStatus('waiting');
+      if (digitStatus === 'disconnected') {
+        connectDigit(config.market);
       }
     } else {
-      purchaseContract();
+      setBotStatus('running');
+      if (config.useBulkTrading) {
+        const tradeCount = config.bulkTradeCount || 1;
+        const concurrentTrades = Math.min(tradeCount, 10);
+        for (let i = 0; i < concurrentTrades; i++) {
+          purchaseContract();
+        }
+      } else {
+        purchaseContract();
+      }
     }
-  }, [api, isConnected, purchaseContract, toast]);
+  }, [api, isConnected, purchaseContract, toast, connectDigit, digitStatus]);
 
-  const isBotRunning = botStatus === 'running' && isRunningRef.current;
+  useEffect(() => {
+    if (botStatus !== 'waiting' || !configRef.current?.useEntryPoint) return;
+
+    const config = configRef.current;
+    const start = config.entryRangeStart ?? 0;
+    const end = config.entryRangeEnd ?? 9;
+
+    if (config.entryPointType === 'single') {
+      const lastDigit = lastDigits[lastDigits.length - 1];
+      if (lastDigit >= start && lastDigit <= end) {
+        purchaseContract();
+      }
+    } else if (config.entryPointType === 'consecutive' && lastDigits.length >= 2) {
+      const lastTwo = lastDigits.slice(-2);
+      if (lastTwo[0] >= start && lastTwo[0] <= end && lastTwo[1] >= start && lastTwo[1] <= end) {
+        purchaseContract();
+      }
+    }
+  }, [lastDigits, botStatus, purchaseContract]);
+
+  const isBotRunning = (botStatus === 'running' || botStatus === 'waiting') && isRunningRef.current;
 
   return (
     <BotContext.Provider value={{

@@ -13,6 +13,7 @@ import { useBot } from '@/context/bot-context';
 import { VOLATILITY_MARKETS } from '@/lib/constants';
 import { Play, Pause, RotateCcw, Bot as BotIcon } from 'lucide-react';
 import { useEffect } from 'react';
+import { Separator } from '../ui/separator';
 
 const formSchema = z.object({
   market: z.string().min(1, 'Market is required'),
@@ -27,6 +28,10 @@ const formSchema = z.object({
   martingaleFactor: z.coerce.number().min(1, 'Factor must be at least 1').optional(),
   useBulkTrading: z.boolean().default(false),
   bulkTradeCount: z.coerce.number().int().min(1, 'Count must be at least 1').optional(),
+  useEntryPoint: z.boolean().default(false),
+  entryPointType: z.enum(['single', 'consecutive']).optional(),
+  entryRangeStart: z.coerce.number().min(0).max(9).optional(),
+  entryRangeEnd: z.coerce.number().min(0).max(9).optional(),
 });
 
 export type BotConfigurationValues = z.infer<typeof formSchema>;
@@ -48,7 +53,11 @@ export default function BotConfigurationForm() {
       useBulkTrading: false,
       bulkTradeCount: 10,
       takeProfit: 10,
-      stopLoss: 50
+      stopLoss: 50,
+      useEntryPoint: false,
+      entryPointType: 'single',
+      entryRangeStart: 0,
+      entryRangeEnd: 9,
     },
   });
 
@@ -67,6 +76,7 @@ export default function BotConfigurationForm() {
   const tradeType = currentForm.watch('tradeType');
   const useMartingale = currentForm.watch('useMartingale');
   const useBulkTrading = currentForm.watch('useBulkTrading');
+  const useEntryPoint = currentForm.watch('useEntryPoint');
 
   return (
     <Card>
@@ -326,6 +336,84 @@ export default function BotConfigurationForm() {
                     </FormItem>
                     )}
                 />
+            )}
+
+            <Separator />
+            
+            <FormField
+              control={currentForm.control}
+              name="useEntryPoint"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Use Entry Spot</FormLabel>
+                    <FormDescription>
+                      Wait for a digit condition before starting.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isBotRunning}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            {useEntryPoint && (
+              <div className="space-y-4 rounded-lg border p-4">
+                <FormField
+                  control={currentForm.control}
+                  name="entryPointType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Entry Spot Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isBotRunning}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an entry type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="single">Single Digit</SelectItem>
+                            <SelectItem value="consecutive">Two Consecutive Digits</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={currentForm.control}
+                        name="entryRangeStart"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>From Range</FormLabel>
+                            <FormControl>
+                            <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={currentForm.control}
+                        name="entryRangeEnd"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>To Range</FormLabel>
+                            <FormControl>
+                            <Input type="number" placeholder="9" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
+              </div>
             )}
 
 
