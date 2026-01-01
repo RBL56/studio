@@ -17,10 +17,18 @@ const chiSquareTest = (observed: number[]) => {
     const chi2 = observed.reduce((acc, obs) => acc + Math.pow(obs - expected, 2) / expected, 0);
     
     // Simplified p-value estimation for 9 degrees of freedom
-    let pValue = 0.5;
-    if (chi2 > 21.67) pValue = 0.005;
-    else if (chi2 > 16.92) pValue = 0.025;
-    else if (chi2 > 14.68) pValue = 0.1;
+    const p_value_table: { [key: number]: number } = {
+        21.67: 0.01, 19.02: 0.025, 16.92: 0.05, 14.68: 0.1, 12.24: 0.2, 4.17: 0.9, 2.7: 0.98
+    };
+
+    let pValue = 1.0;
+    for (const threshold in p_value_table) {
+        if (chi2 >= parseFloat(threshold)) {
+            pValue = p_value_table[threshold as any];
+            break;
+        }
+    }
+
 
     let interpretation = "Uniform (fair)";
     if (pValue < 0.01) interpretation = "STRONG BIAS DETECTED";
@@ -98,7 +106,7 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 // --- End of Analysis Logic ---
 
 const SignalArena = () => {
-    const { api, isConnected, subscribeToMessages, status: apiStatus } = useDerivApi();
+    const { api, isConnected, subscribeToMessages, status: apiStatus, marketConfig } = useDerivApi();
     const [tickData, setTickData] = useState<{ [key: string]: number[] }>({});
     const [analysisData, setAnalysisData] = useState<{ [key: string]: any }>({});
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
@@ -108,10 +116,12 @@ const SignalArena = () => {
     
     const subscribedSymbols = useRef(new Set<string>());
 
-    const extractLastDigit = useCallback((price: number) => {
-        const priceStr = price.toString();
+    const extractLastDigit = useCallback((price: number, marketSymbol: string) => {
+        const config = marketConfig[marketSymbol];
+        const decimals = config?.decimals || 2;
+        const priceStr = price.toFixed(decimals);
         return parseInt(priceStr[priceStr.length - 1]);
-    }, []);
+    }, [marketConfig]);
 
     const FILTERS = React.useMemo(() => ({
         'all': Object.keys(SYMBOL_CONFIG),
@@ -141,29 +151,54 @@ const SignalArena = () => {
 
     useEffect(() => {
         if (!api || !isConnected) return;
-        const symbolsToSubscribe = new Set(Object.keys(SYMBOL_CONFIG));
-        symbolsToSubscribe.forEach(symbol => {
+        
+        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS];
+        
+        symbolsToSubscribe.forEach((symbol, index) => {
             if (!subscribedSymbols.current.has(symbol)) {
-                api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-                subscribedSymbols.current.add(symbol);
+                setTimeout(() => {
+                    if (api && !subscribedSymbols.current.has(symbol)) {
+                        api.send(JSON.stringify({ ticks_history: symbol, end: "latest", count: 500, subscribe: 1 }));
+                        subscribedSymbols.current.add(symbol);
+                    }
+                }, index * 500); // Stagger requests
             }
         });
-    }, [api, isConnected]);
+    }, [api, isConnected, activeFilter, FILTERS]);
 
     const handleMessage = useCallback((data: any) => {
-        if (data.error || !data.tick) return;
-        
-        const symbol = data.tick.symbol;
-        if (!subscribedSymbols.current.has(symbol)) return;
+        if (data.error) {
+            if(data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired' && data.error.code !== 'ForgetInvalid' && data.error.code !== 'RateLimit') {
+                console.error("Signal Arena API Error:", data.error.message);
+            }
+            return;
+        }
 
-        setTickCount(prev => prev + 1);
+        const processNewTick = (tick: any) => {
+            const symbol = tick.symbol;
+            if (subscribedSymbols.current.has(symbol)) {
+                setTickCount(prev => prev + 1);
+                const newDigit = extractLastDigit(parseFloat(tick.quote), symbol);
+                setTickData(prev => {
+                    const updatedTicks = [...(prev[symbol] || [])];
+                    if(updatedTicks.length >= 500) {
+                        updatedTicks.shift();
+                    }
+                    updatedTicks.push(newDigit);
+                    return { ...prev, [symbol]: updatedTicks };
+                });
+            }
+        };
 
-        const newDigit = extractLastDigit(parseFloat(data.tick.quote));
-        setTickData(prev => {
-            const updatedTicks = [...(prev[symbol] || []), newDigit];
-            if (updatedTicks.length > 500) updatedTicks.shift();
-            return { ...prev, [symbol]: updatedTicks };
-        });
+        if (data.msg_type === 'history') {
+            const symbol = data.echo_req.ticks_history;
+            const history = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
+            setTickData(prev => ({...prev, [symbol]: history }));
+        }
+
+        if (data.msg_type === 'tick') {
+            processNewTick(data.tick);
+        }
     }, [extractLastDigit]);
 
     useEffect(() => {
@@ -176,12 +211,14 @@ const SignalArena = () => {
             const updatedAnalysis: { [key: string]: any } = {};
             for (const symbol of subscribedSymbols.current) {
                 const digits = tickData[symbol];
-                if (digits) {
+                if (digits && digits.length >= 100) {
                     const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol].name);
                     if (result) updatedAnalysis[symbol] = result;
                 }
             }
-            setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
+            if (Object.keys(updatedAnalysis).length > 0) {
+                 setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
+            }
             setUpdateTime(new Date().toLocaleTimeString());
         }, 1000);
         return () => clearInterval(interval);
@@ -226,7 +263,7 @@ const SignalArena = () => {
                 {card.reasons.length > 0 && <div className="signal-reasons">{card.reasons.map((reason: string) => <span key={reason} className="signal-reason-tag">{reason}</span>)}</div>}
                 <div className="signal-digits-table">
                     {Array.from({ length: 10 }).map((_, i) => (
-                        <div key={i} className={cn("signal-digit-cell", getDigitClass(card.percentages[`digit_${i}`]))}>
+                        <div key={i} className={cn("signal-digit-cell", getDigitClass(card.percentages[`digit_${i}`]), i === 0 ? 'digit-zero' : '')}>
                             <div className="signal-digit-label">{i}</div><div className="signal-digit-value">{card.percentages[`digit_${i}`].toFixed(1)}%</div>
                         </div>
                     ))}
@@ -248,11 +285,16 @@ const SignalArena = () => {
             return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Connecting to Deriv API...</p></div>;
         }
 
-        const visibleCards = displayedCards.filter(card => (tickData[card.symbol]?.length || 0) >= 100);
-        const loadingCards = FILTERS[activeFilter as keyof typeof FILTERS].filter(symbol => (tickData[symbol]?.length || 0) < 100);
+        const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS];
+        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol) && (tickData[card.symbol]?.length || 0) >= 100);
+        const loadingCards = symbolsInFilter.filter(symbol => (tickData[symbol]?.length || 0) < 100);
 
+        if (visibleCards.length === 0 && loadingCards.length === 0 && Array.from(subscribedSymbols.current).every(s => !symbolsInFilter.includes(s))) {
+             return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Subscribing to '{activeFilter}' markets...</p></div>;
+        }
+        
         if (visibleCards.length === 0 && loadingCards.length === 0) {
-            return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Subscribing to '{activeFilter}' markets...</p></div>;
+            return <div className="signal-no-data"><p>No signals match the current filter.</p></div>
         }
 
         return (
@@ -263,7 +305,7 @@ const SignalArena = () => {
                         <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol].name}</h3><div className="symbol">{symbol}</div></div></div>
                         <div className="signal-loading" style={{padding: '20px 0'}}>
                             <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
-                            <p style={{fontSize: '0.875rem'}}>Collecting live ticks... ({(tickData[symbol]?.length || 0)}/100)</p>
+                            <p style={{fontSize: '0.875rem'}}>Collecting historical ticks... ({(tickData[symbol]?.length || 0)}/500)</p>
                         </div>
                     </div>
                 ))}
@@ -274,7 +316,7 @@ const SignalArena = () => {
     return (
         <div className="signal-center-body">
             <div className="signal-center-container">
-                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Ticks: {tickCount}</span><span>{updateTime}</span></div></div>
+                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Ticks Processed: {tickCount}</span><span>Last Update: {updateTime}</span></div></div>
                 <div className="signal-risk-panel">
                     <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
                     <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
