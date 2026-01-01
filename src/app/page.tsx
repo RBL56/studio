@@ -11,9 +11,7 @@ import BotConfigurationForm from '@/components/bot-builder/bot-configuration-for
 import BotStatus from '@/components/bot-builder/bot-status';
 import TradeLog from '@/components/bot-builder/trade-log';
 import QuickTradePanel from '@/components/bot-builder/quick-trade-panel';
-import LocoSignals from '@/components/bot-builder/loco-signals';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useRef, useEffect } from 'react';
 
@@ -49,7 +47,6 @@ function BotBuilderContent() {
                   <TabsTrigger value="bot-builder" className="py-3 text-base w-full justify-start"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                   <TabsTrigger value="dcircle" className="py-3 text-base w-full justify-start"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
                   <TabsTrigger value="trading-view" className="py-3 text-base w-full justify-start"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
-                  <TabsTrigger value="signal-arena" className="py-3 text-base w-full justify-start"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
               </TabsList>
               
               <div className="md:hidden px-4">
@@ -58,7 +55,6 @@ function BotBuilderContent() {
                         <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                         <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
                         <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
-                        <TabsTrigger value="signal-arena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
                     </TabsList>
                 </ScrollArea>
               </div>
@@ -116,10 +112,6 @@ function BotBuilderContent() {
                             />
                         </div>
                     </div>
-                </TabsContent>
-                
-                <TabsContent value="signal-arena" className="mt-0 px-4 md:px-0">
-                  <LocoSignals />
                 </TabsContent>
               </div>
           </Tabs>
