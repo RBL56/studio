@@ -42,7 +42,7 @@ function BotBuilderContent() {
   };
 
   return (
-    <div className={cn(activeTab !== 'signal-arena' && 'container', "py-4 md:py-8")}>
+    <div className={cn("py-4 md:py-8", activeTab !== 'signal-arena' ? 'container' : '')}>
         {isConnected ? (
           <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
               <ScrollArea className="w-full whitespace-nowrap pb-4">
