@@ -35,6 +35,7 @@ interface DerivApiContextType {
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
 
+// This is your application's unique ID from Deriv. It's loaded from the .env file.
 const APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
 
 // Simple obfuscation for the token in local storage
@@ -77,11 +78,11 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const connect = useCallback(async (apiToken: string) => {
-    if (!APP_ID) {
+    if (!APP_ID || APP_ID === 'your_app_id_goes_here') {
       toast({
         variant: "destructive",
         title: "Configuration Error",
-        description: "Deriv App ID is not set.",
+        description: "Deriv App ID is not set. Please add it to your .env file.",
       });
       return Promise.reject(new Error('Deriv App ID not set.'));
     }

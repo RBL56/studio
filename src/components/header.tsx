@@ -18,6 +18,7 @@ import {
 } from './ui/dialog';
 import { ThemeToggle } from './theme-toggle';
 
+// This is your application's unique ID from Deriv.
 const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID;
 
 export default function Header() {
@@ -25,8 +26,8 @@ export default function Header() {
 
   const handleLoginRedirect = () => {
     const redirectUri = "https://mafurumbanya.netlify.app/";
-    if (!DERIV_APP_ID) {
-      alert('Deriv App ID is not configured.');
+    if (!DERIV_APP_ID || DERIV_APP_ID === 'your_app_id_goes_here') {
+      alert('Deriv App ID is not configured. Please set it in your .env file.');
       return;
     }
     const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&redirect_uri=${redirectUri}&lang=EN&l=en`;
