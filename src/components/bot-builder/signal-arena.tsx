@@ -113,7 +113,7 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 
 
 const SignalArena = () => {
-  const { api, isConnected, subscribeToMessages, status } = useDerivApi();
+  const { api, isConnected, subscribeToMessages, status: apiStatus } = useDerivApi();
   const [tickData, setTickData] = useState<{ [key: string]: number[] }>({});
   const [analysisData, setAnalysisData] = useState<{ [key: string]: any }>({});
   const [displayedCards, setDisplayedCards] = useState<any[]>([]);
@@ -162,7 +162,7 @@ const SignalArena = () => {
 
   const handleSetFilter = (filter: string) => {
     setActiveFilter(filter);
-    const newVisibleSymbols = FILTERS[filter as keyof typeof FILTERS] || FILTERS.all; // Fallback to all
+    const newVisibleSymbols = FILTERS[filter as keyof typeof FILTERS] || FILTERS.all;
     setVisibleSymbols(newVisibleSymbols);
   };
   
@@ -187,7 +187,6 @@ const SignalArena = () => {
         delete subscriptionIds.current[symbol];
       }
       subscribedSymbols.current.delete(symbol);
-      // Clear data for unsubscribed symbols
       setTickData(prev => { const next = {...prev}; delete next[symbol]; return next; });
       setAnalysisData(prev => { const next = {...prev}; delete next[symbol]; return next; });
     });
@@ -196,18 +195,18 @@ const SignalArena = () => {
 
 
   const handleMessage = useCallback((data: any) => {
-    if (data.error || !data.tick && !data.history) return;
+    if (data.error || (!data.tick && !data.history)) return;
 
     let symbol: string | undefined;
-    if(data.tick) symbol = data.tick.symbol;
-    if(data.history) symbol = data.echo_req.ticks_history;
-    if(!symbol || !visibleSymbols.includes(symbol)) return;
+    if (data.tick) symbol = data.tick.symbol;
+    if (data.history) symbol = data.echo_req.ticks_history;
+    if (!symbol || !visibleSymbols.includes(symbol)) return;
 
     setTickCount(prev => prev + 1);
 
-    if (data.history) {
+    if (data.history && data.history.prices) {
         const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p)));
-        setTickData(prev => ({...prev, [symbol!]: (prev[symbol!] || []).concat(newDigits).slice(-500) }));
+        setTickData(prev => ({...prev, [symbol!]: newDigits.slice(-500) }));
     }
 
     if (data.tick) {
@@ -218,7 +217,7 @@ const SignalArena = () => {
     if (data.subscription) {
         subscriptionIds.current[symbol] = data.subscription.id;
     }
-  }, [extractLastDigit, visibleSymbols]);
+}, [extractLastDigit, visibleSymbols]);
 
 
   useEffect(() => {
@@ -240,7 +239,8 @@ const SignalArena = () => {
               }
           }
           setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
-      }, 2000); // Analyze every 2 seconds
+          setUpdateTime(new Date().toLocaleTimeString());
+      }, 1000); // Analyze every 1 second
 
       return () => clearInterval(interval);
   }, [tickData, visibleSymbols]);
@@ -370,7 +370,7 @@ const SignalArena = () => {
                     <div className="signal-status-bar">
                         <div className="signal-status-indicator">
                             <div className={cn("signal-status-dot", { 'connected': isConnected })}></div>
-                            <span>{status}</span>
+                            <span>{apiStatus}</span>
                         </div>
                         <span>Ticks: {tickCount}</span>
                         <span>{updateTime}</span>
@@ -416,5 +416,3 @@ const SignalArena = () => {
 };
 
 export default SignalArena;
-
-    
