@@ -192,6 +192,22 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         openContractsRef.current.delete(contractId);
         
         const config = configRef.current;
+        const isWin = contract.status === 'won';
+        
+        if (isWin) {
+            setTotalWins(prev => prev + 1);
+            if(config) {
+                currentStakeRef.current = config.initialStake;
+            }
+        } else {
+            setTotalLosses(prev => prev + 1);
+            if (config?.useMartingale) {
+                currentStakeRef.current = stake * (config.martingaleFactor || 2.1);
+            } else if (config) {
+                currentStakeRef.current = config.initialStake;
+            }
+        }
+        
         if (isRunningRef.current) {
             if (config?.useBulkTrading) {
                 const completedTrades = bulkTradesCompletedRef.current + 1;
@@ -204,7 +220,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
-        const isWin = contract.status === 'won';
         const profit = contract.profit;
         const newTotalProfit = totalProfitRef.current + profit;
         
@@ -220,18 +235,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         } : t));
 
         setTotalProfit(newTotalProfit);
-
-        if (isWin) {
-            setTotalWins(prev => prev + 1);
-            if(configRef.current) {
-                currentStakeRef.current = configRef.current.initialStake;
-            }
-        } else {
-            setTotalLosses(prev => prev + 1);
-            if (configRef.current?.useMartingale) {
-                 currentStakeRef.current = stake * (configRef.current.martingaleFactor || 2.1);
-            }
-        }
 
         if (config?.takeProfit && newTotalProfit >= config.takeProfit) {
             toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
@@ -329,4 +332,5 @@ export const useBot = () => {
   return context;
 };
 
+    
     
