@@ -227,18 +227,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
-        if (isRunningRef.current) {
-            if (config?.useBulkTrading) {
-                const completedTrades = bulkTradesCompletedRef.current + 1;
-                const totalTrades = config.bulkTradeCount || 1;
-                if (completedTrades < totalTrades) {
-                    purchaseContract();
-                }
-            } else {
-                purchaseContract();
-            }
-        }
-        
         const profit = contract.profit;
         const newTotalProfit = totalProfitRef.current + profit;
         
@@ -274,6 +262,18 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: "Stop-Loss Hit", description: `Bot stopped after ${config.stopLossConsecutive} consecutive losses.` });
             stopBot(false);
             return;
+        }
+        
+        if (isRunningRef.current) {
+            if (config?.useBulkTrading) {
+                const completedTrades = bulkTradesCompletedRef.current + 1;
+                const totalTrades = config.bulkTradeCount || 1;
+                if (completedTrades < totalTrades) {
+                    purchaseContract();
+                }
+            } else {
+                purchaseContract();
+            }
         }
         
         if (config?.useBulkTrading) {
