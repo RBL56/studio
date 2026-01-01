@@ -118,7 +118,7 @@ function BotBuilderContent() {
                     </div>
                 </TabsContent>
                 
-                <TabsContent value="signal-arena" className="mt-0">
+                <TabsContent value="signal-arena" className="mt-0 px-4 md:px-0">
                   <LocoSignals />
                 </TabsContent>
               </div>
