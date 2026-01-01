@@ -85,15 +85,31 @@
 
 /* Draggable Disclaimer */
 .draggable-disclaimer {
-    @apply fixed z-50 p-4 rounded-lg shadow-lg cursor-move;
+    @apply fixed z-50 rounded-lg shadow-lg;
     @apply bg-background/80 backdrop-blur-sm border border-border;
-    @apply max-w-sm;
+    transition: width 0.3s ease, height 0.3s ease;
 }
-.draggable-disclaimer p {
-    @apply text-xs text-muted-foreground;
+.draggable-disclaimer.is-open {
+    @apply p-4 max-w-sm;
 }
-.draggable-disclaimer strong {
+.draggable-disclaimer:not(.is-open) {
+    @apply p-2 w-auto cursor-pointer;
+}
+
+.disclaimer-header {
+    @apply flex items-center gap-2 cursor-move;
+}
+
+.disclaimer-title {
     @apply font-semibold text-foreground;
+}
+
+.draggable-disclaimer p {
+    @apply text-xs text-muted-foreground mt-2;
+}
+
+.close-btn {
+    @apply ml-auto p-1 rounded-full hover:bg-muted/50;
 }
 
 
@@ -602,4 +618,8 @@
 @media (max-width: 480px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
     .bot-buttons { flex-direction: column; }
+}
+
+footer {
+    @apply text-center text-xs text-muted-foreground p-4 border-t;
 }
