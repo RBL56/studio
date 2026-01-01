@@ -287,7 +287,11 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             return newTrades;
         });
 
-        // --- Fast-track next trade ---
+        // --- Stop/Continue Logic ---
+        if (config?.useBulkTrading) {
+            bulkTradesCompletedRef.current += 1;
+        }
+
         let shouldStop = false;
         let stopReason: 'tp' | 'sl' | null = null;
         
@@ -303,36 +307,31 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: "Stop-Loss Hit", description: `Bot stopped after ${config.stopLossConsecutive} consecutive losses.` });
             shouldStop = true;
             stopReason = 'sl';
+        } else if (config?.useBulkTrading && bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
+             if (openContractsRef.current.size === 0) {
+                toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
+                shouldStop = true;
+            }
         }
 
+
         if (shouldStop) {
-            if (stopReason) {
-                playSound(stopReason);
-            }
+            if (stopReason) playSound(stopReason);
             stopBot(false);
             return;
         }
 
         if (isRunningRef.current) {
+            // For bulk trading, a new contract is purchased only if we haven't reached the total count yet.
             if (config?.useBulkTrading) {
-                const completedTrades = bulkTradesCompletedRef.current + 1;
-                const totalTrades = config.bulkTradeCount || 1;
-                if (completedTrades < totalTrades) {
+                // If we started with N concurrent trades, we only need to buy a new one for each one that closes.
+                if (bulkTradesCompletedRef.current < (config.bulkTradeCount || 1)) {
                     purchaseContract();
                 }
             } else {
+                // For non-bulk trading, always purchase the next contract.
                 purchaseContract();
             }
-        }
-        
-        if (config?.useBulkTrading) {
-          bulkTradesCompletedRef.current += 1;
-          if (bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
-            if (openContractsRef.current.size === 0) {
-              toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
-              stopBot(false);
-            }
-          }
         }
     }
   }, [purchaseContract, stopBot, toast, extractLastDigit]);
@@ -419,11 +418,20 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (conditionMet) {
-      purchaseContract();
-      // This will now be set to false inside purchaseContract
-      // waitingForEntryRef.current = false; 
       if (digitStatus !== 'disconnected') {
           disconnectDigit(true);
+      }
+
+      waitingForEntryRef.current = false; 
+
+      if (config.useBulkTrading) {
+        const tradeCount = config.bulkTradeCount || 1;
+        const concurrentTrades = Math.min(tradeCount, 10);
+        for (let i = 0; i < concurrentTrades; i++) {
+          purchaseContract();
+        }
+      } else {
+        purchaseContract();
       }
     }
   }, [lastDigits, purchaseContract, digitStatus, disconnectDigit]);
