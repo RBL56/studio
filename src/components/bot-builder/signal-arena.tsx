@@ -176,7 +176,7 @@ const SignalArena = () => {
       api.send(JSON.stringify({
         ticks_history: symbol,
         end: "latest",
-        count: 500,
+        count: 100,
         style: "ticks",
         subscribe: 1
       }));
@@ -189,14 +189,37 @@ const SignalArena = () => {
   const handleMessage = useCallback((data: any) => {
     if (data.error || (!data.tick && !data.history)) return;
     
-    let symbol: string | undefined = data.tick?.symbol || data.history?.symbol;
+    let symbol: string | undefined;
+    if (data.tick) {
+        symbol = data.tick.symbol;
+    } else if (data.history) {
+        // Find symbol from subscription id
+        for (const s in subscriptionIds.current) {
+            if (subscriptionIds.current[s] === data.subscription.id) {
+                symbol = s;
+                break;
+            }
+        }
+        if (!symbol && data.echo_req.ticks_history) {
+          symbol = data.echo_req.ticks_history;
+        }
+    } else if (data.subscription) {
+       for (const s in subscriptionIds.current) {
+            if (subscriptionIds.current[s] === data.subscription.id) {
+                symbol = s;
+                break;
+            }
+        }
+    }
+
     if (!symbol || !subscribedSymbols.current.has(symbol)) return;
+
 
     setTickCount(prev => prev + 1);
 
     if (data.history) { // Historical data
       const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p)));
-      setTickData(prev => ({...prev, [symbol!]: newDigits}));
+      setTickData(prev => ({...prev, [symbol!]: [...(prev[symbol!] || []), ...newDigits].slice(-500)}));
     }
 
     if (data.tick) { // Live tick data
