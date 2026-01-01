@@ -122,12 +122,12 @@ const SignalArena = () => {
         const priceStr = price.toFixed(decimals);
         return parseInt(priceStr[priceStr.length - 1]);
     }, [marketConfig]);
-
+    
     const FILTERS = React.useMemo(() => ({
         'all': Object.keys(SYMBOL_CONFIG),
-        'strong': [], // Populated dynamically
-        'over3': [], // Populated dynamically
-        'under6': [], // Populated dynamically
+        'strong': [],
+        'over3': [],
+        'under6': [],
         'volatility': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'volatility'),
         'jump': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'jump'),
     }), []);
@@ -149,35 +149,32 @@ const SignalArena = () => {
         setDisplayedCards(filteredData);
     }, [activeFilter, analysisData]);
 
-    useEffect(() => {
-        if (!api || !isConnected) return;
-    
-        const subscribeToAllMarkets = () => {
-            Object.keys(SYMBOL_CONFIG).forEach(symbol => {
-                if (api && !subscribedSymbols.current.has(symbol)) {
-                    api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-                    subscribedSymbols.current.add(symbol);
-                }
-            });
-        };
-    
-        subscribeToAllMarkets();
-    
-    }, [api, isConnected]);
-
     const handleMessage = useCallback((data: any) => {
         if (data.error) {
-            if(data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired' && data.error.code !== 'ForgetInvalid' && data.error.code !== 'RateLimit') {
-                console.error("Signal Arena API Error:", data.error.message);
+            if (data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired' && data.error.code !== 'ForgetInvalid' && data.error.code !== 'RateLimit' && data.error.code !== 'InvalidSymbol') {
+                 console.error("Signal Arena API Error:", data.error.message);
+            }
+            if (data.error.echo_req?.ticks_history) {
+                const symbol = data.error.echo_req.ticks_history;
+                setTickData(prev => ({...prev, [symbol]: [] }));
             }
             return;
         }
 
+        if (data.msg_type === 'history') {
+            const symbol = data.echo_req.ticks_history;
+            const digits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
+            setTickData(prev => ({ ...prev, [symbol]: digits.slice(-500) }));
+            if (api) {
+                api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+            }
+        }
+        
         if (data.msg_type === 'tick') {
+            setTickCount(prev => prev + 1);
             const tick = data.tick;
             const symbol = tick.symbol;
             if (subscribedSymbols.current.has(symbol)) {
-                setTickCount(prev => prev + 1);
                 const newDigit = extractLastDigit(parseFloat(tick.quote), symbol);
                 setTickData(prev => {
                     const existingTicks = prev[symbol] || [];
@@ -189,7 +186,32 @@ const SignalArena = () => {
                 });
             }
         }
-    }, [extractLastDigit]);
+    }, [api, extractLastDigit]);
+
+    useEffect(() => {
+        if (!api || !isConnected) return;
+    
+        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS];
+        let delay = 0;
+    
+        symbolsToSubscribe.forEach(symbol => {
+            if (!subscribedSymbols.current.has(symbol)) {
+                setTimeout(() => {
+                    if (api && api.readyState === WebSocket.OPEN) {
+                         api.send(JSON.stringify({
+                            ticks_history: symbol,
+                            end: "latest",
+                            count: 500,
+                            style: "ticks"
+                        }));
+                        subscribedSymbols.current.add(symbol);
+                    }
+                }, delay);
+                delay += 750; // 750ms stagger
+            }
+        });
+    
+    }, [api, isConnected, activeFilter, FILTERS]);
 
     useEffect(() => {
         const unsubscribe = subscribeToMessages(handleMessage);
@@ -202,7 +224,7 @@ const SignalArena = () => {
             for (const symbol of subscribedSymbols.current) {
                 const digits = tickData[symbol];
                 if (digits && digits.length >= 100) {
-                    const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol].name);
+                    const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol]?.name || symbol);
                     if (result) updatedAnalysis[symbol] = result;
                 }
             }
@@ -213,10 +235,11 @@ const SignalArena = () => {
         }, 1000);
         return () => clearInterval(interval);
     }, [tickData]);
-
+    
     useEffect(() => {
         filterAndSortData();
     }, [analysisData, activeFilter, filterAndSortData]);
+
 
     const renderCard = (card: any) => {
         if (!card) return null;
@@ -276,6 +299,14 @@ const SignalArena = () => {
         }
 
         const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS];
+        
+        if (displayedCards.length === 0 && symbolsInFilter.every(s => (tickData[s]?.length ?? 0) < 100)) {
+             const loadingSymbolsCount = symbolsInFilter.filter(s => subscribedSymbols.current.has(s) && (tickData[s] === undefined || (tickData[s]?.length ?? 0) < 500)).length;
+             if (loadingSymbolsCount > 0) {
+                 return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Fetching historical data for {loadingSymbolsCount} market(s)...</p></div>;
+             }
+        }
+       
         const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol));
         const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
             !analysisData[symbol] || (tickData[symbol]?.length || 0) < 100
@@ -292,7 +323,7 @@ const SignalArena = () => {
                     .filter(symbol => !visibleCards.some(card => card.symbol === symbol))
                     .map(symbol => (
                     <div key={symbol} className="signal-card">
-                        <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol].name}</h3><div className="symbol">{symbol}</div></div></div>
+                        <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol]?.name || symbol}</h3><div className="symbol">{symbol}</div></div></div>
                         <div className="signal-loading" style={{padding: '20px 0'}}>
                             <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
                             <p style={{fontSize: '0.875rem'}}>Collecting live ticks... ({(tickData[symbol]?.length || 0)}/100)</p>
@@ -325,3 +356,4 @@ const SignalArena = () => {
 };
 
 export default SignalArena;
+
