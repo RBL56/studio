@@ -231,6 +231,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const profit = contract.profit;
         const newTotalProfit = totalProfitRef.current + profit;
         
+        const entryTick = contract.entry_tick;
+        const entryDigit = entryTick ? extractLastDigit(entryTick, contract.underlying) : undefined;
         const exitTick = contract.exit_tick;
         const exitDigit = exitTick ? extractLastDigit(exitTick, contract.underlying) : undefined;
 
@@ -238,6 +240,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             ...t,
             payout: contract.payout,
             isWin,
+            entryDigit,
             exitTick,
             exitDigit
         } : t));

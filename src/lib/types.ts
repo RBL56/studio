@@ -11,6 +11,7 @@ export type Trade = {
     stake: number;
     payout: number;
     isWin: boolean;
+    entryDigit?: number;
     exitTick?: number;
     exitDigit?: number;
 };

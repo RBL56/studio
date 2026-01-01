@@ -36,13 +36,14 @@ export default function TradeLog() {
                     <TableHead>Stake</TableHead>
                     <TableHead>Payout</TableHead>
                     <TableHead>Result</TableHead>
+                    <TableHead>Entry Digit</TableHead>
                     <TableHead>Exit Digit</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
                 {trades.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
                             No trades yet. Start the bot to see the log.
                         </TableCell>
                     </TableRow>
@@ -60,6 +61,9 @@ export default function TradeLog() {
                             className={cn(trade.isWin ? 'bg-green-500' : 'bg-red-500')}>
                         {trade.isWin ? 'Win' : 'Loss'}
                         </Badge>
+                    </TableCell>
+                    <TableCell className="font-bold text-lg">
+                        {trade.entryDigit !== undefined ? trade.entryDigit : '-'}
                     </TableCell>
                     <TableCell className="font-bold text-lg">
                         {trade.exitDigit !== undefined ? trade.exitDigit : '-'}
