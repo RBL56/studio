@@ -191,7 +191,7 @@ const SignalArena = () => {
     useEffect(() => {
         if (!api || !isConnected) return;
     
-        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS];
+        const symbolsToSubscribe = Object.keys(SYMBOL_CONFIG);
         let delay = 0;
     
         symbolsToSubscribe.forEach(symbol => {
@@ -207,11 +207,11 @@ const SignalArena = () => {
                         subscribedSymbols.current.add(symbol);
                     }
                 }, delay);
-                delay += 750; // 750ms stagger
+                delay += 350; // Stagger requests to avoid rate limiting
             }
         });
     
-    }, [api, isConnected, activeFilter, FILTERS]);
+    }, [api, isConnected]);
 
     useEffect(() => {
         const unsubscribe = subscribeToMessages(handleMessage);
@@ -299,19 +299,18 @@ const SignalArena = () => {
         }
 
         const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS];
-        
-        if (displayedCards.length === 0 && symbolsInFilter.every(s => (tickData[s]?.length ?? 0) < 100)) {
+        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol));
+        const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
+            !analysisData[symbol] || (tickData[symbol]?.length || 0) < 100
+        );
+
+        if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === symbolsInFilter.length) {
              const loadingSymbolsCount = symbolsInFilter.filter(s => subscribedSymbols.current.has(s) && (tickData[s] === undefined || (tickData[s]?.length ?? 0) < 500)).length;
              if (loadingSymbolsCount > 0) {
                  return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Fetching historical data for {loadingSymbolsCount} market(s)...</p></div>;
              }
         }
        
-        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol));
-        const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
-            !analysisData[symbol] || (tickData[symbol]?.length || 0) < 100
-        );
-
         if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === 0) {
             return <div className="signal-no-data"><p>No signals match the current filter.</p></div>
         }
@@ -320,13 +319,13 @@ const SignalArena = () => {
             <>
                 {visibleCards.map(card => renderCard(card))}
                 {loadingOrNoDataSymbols
-                    .filter(symbol => !visibleCards.some(card => card.symbol === symbol))
+                    .filter(symbol => symbolsInFilter.includes(symbol) && !visibleCards.some(card => card.symbol === symbol))
                     .map(symbol => (
                     <div key={symbol} className="signal-card">
                         <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol]?.name || symbol}</h3><div className="symbol">{symbol}</div></div></div>
                         <div className="signal-loading" style={{padding: '20px 0'}}>
                             <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
-                            <p style={{fontSize: '0.875rem'}}>Collecting live ticks... ({(tickData[symbol]?.length || 0)}/100)</p>
+                            <p style={{fontSize: '0.875rem'}}>Collecting data... ({(tickData[symbol]?.length || 0)}/500)</p>
                         </div>
                     </div>
                 ))}
@@ -357,3 +356,4 @@ const SignalArena = () => {
 
 export default SignalArena;
 
+    
