@@ -17,6 +17,7 @@ const chiSquareTest = (observed: number[]) => {
     const chi2 = observed.reduce((acc, obs) => acc + Math.pow(obs - expected, 2) / expected, 0);
     
     // Simplified p-value estimation for 9 degrees of freedom
+    // Critical values for Chi-Square distribution with 9 DF
     const p_value_table: { [key: number]: number } = {
         21.67: 0.01, 19.02: 0.025, 16.92: 0.05, 14.68: 0.1, 12.24: 0.2, 4.17: 0.9, 2.7: 0.98
     };
@@ -29,13 +30,13 @@ const chiSquareTest = (observed: number[]) => {
         }
     }
 
-
     let interpretation = "Uniform (fair)";
     if (pValue < 0.01) interpretation = "STRONG BIAS DETECTED";
     else if (pValue < 0.05) interpretation = "Bias detected";
 
     return { chi2, pValue, interpretation };
 };
+
 
 const analyzeDigits = (digits: number[], symbol: string, name: string) => {
     const total = digits.length;
@@ -151,19 +152,32 @@ const SignalArena = () => {
 
     useEffect(() => {
         if (!api || !isConnected) return;
-        
+    
         const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS];
-        
-        symbolsToSubscribe.forEach((symbol, index) => {
-            if (!subscribedSymbols.current.has(symbol)) {
-                setTimeout(() => {
-                    if (api && !subscribedSymbols.current.has(symbol)) {
-                        api.send(JSON.stringify({ ticks_history: symbol, end: "latest", count: 500, subscribe: 1 }));
-                        subscribedSymbols.current.add(symbol);
-                    }
-                }, index * 500); // Stagger requests
+        const symbolsToBatch = symbolsToSubscribe.filter(s => !subscribedSymbols.current.has(s));
+    
+        const batchSize = 5;
+        const delay = 200; // ms between batches
+    
+        const subscribeBatch = async (batchIndex: number) => {
+            const batch = symbolsToBatch.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
+            if (batch.length === 0) return;
+    
+            batch.forEach(symbol => {
+                if (api && !subscribedSymbols.current.has(symbol)) {
+                    api.send(JSON.stringify({ ticks_history: symbol, end: "latest", count: 500, subscribe: 1 }));
+                    subscribedSymbols.current.add(symbol);
+                }
+            });
+    
+            // Schedule the next batch
+            if ((batchIndex + 1) * batchSize < symbolsToBatch.length) {
+                setTimeout(() => subscribeBatch(batchIndex + 1), delay);
             }
-        });
+        };
+    
+        subscribeBatch(0);
+    
     }, [api, isConnected, activeFilter, FILTERS]);
 
     const handleMessage = useCallback((data: any) => {
@@ -287,9 +301,9 @@ const SignalArena = () => {
 
         const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS];
         const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol) && (tickData[card.symbol]?.length || 0) >= 100);
-        const loadingCards = symbolsInFilter.filter(symbol => (tickData[symbol]?.length || 0) < 100);
+        const loadingCards = symbolsInFilter.filter(symbol => (tickData[symbol]?.length || 0) < 100 && subscribedSymbols.current.has(symbol));
 
-        if (visibleCards.length === 0 && loadingCards.length === 0 && Array.from(subscribedSymbols.current).every(s => !symbolsInFilter.includes(s))) {
+        if (visibleCards.length === 0 && loadingCards.length === 0 && !Array.from(subscribedSymbols.current).some(s => symbolsInFilter.includes(s))) {
              return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Subscribing to '{activeFilter}' markets...</p></div>;
         }
         
