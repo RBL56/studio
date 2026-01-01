@@ -7,8 +7,6 @@ import { cn } from '@/lib/utils';
 import { Bot } from 'lucide-react';
 
 // --- Start of Analysis Logic ---
-
-// Simplified Chi-Square calculation (pure JS)
 const chiSquareTest = (observed: number[]) => {
     const total = observed.reduce((a, b) => a + b, 0);
     if (total === 0) return { chi2: 0, pValue: 1, interpretation: 'No Data' };
@@ -17,9 +15,8 @@ const chiSquareTest = (observed: number[]) => {
     if (expected === 0) return { chi2: 0, pValue: 1, interpretation: 'No Data' };
 
     const chi2 = observed.reduce((acc, obs) => acc + Math.pow(obs - expected, 2) / expected, 0);
-
-    // Simplified p-value estimation for 9 degrees of freedom (for 10 categories)
-    // Critical values: 0.05 -> 16.92, 0.01 -> 21.67
+    
+    // Simplified p-value estimation for 9 degrees of freedom
     let pValue = 0.5;
     if (chi2 > 21.67) pValue = 0.005;
     else if (chi2 > 16.92) pValue = 0.025;
@@ -32,15 +29,16 @@ const chiSquareTest = (observed: number[]) => {
     return { chi2, pValue, interpretation };
 };
 
-
 const analyzeDigits = (digits: number[], symbol: string, name: string) => {
     const total = digits.length;
     if (total < 100) return null;
 
     const counts = Array(10).fill(0);
-    for (const digit of digits) {
-        counts[digit]++;
-    }
+    digits.forEach(digit => {
+        if (digit >= 0 && digit <= 9) {
+            counts[digit]++;
+        }
+    });
 
     const percentages: { [key: string]: number } = {};
     for (let i = 0; i < 10; i++) {
@@ -53,28 +51,18 @@ const analyzeDigits = (digits: number[], symbol: string, name: string) => {
     percentages.odd = 100 - percentages.even;
 
     const chiSquare = chiSquareTest(counts);
-
     let confidence = 0;
     const reasons: string[] = [];
 
     if (percentages.over_3 >= 66) { confidence += 35; reasons.push("Strong Over 3"); }
     else if (percentages.over_3 >= 61) { confidence += 15; reasons.push("Moderate Over 3"); }
-
     if (percentages.under_6 >= 66) { confidence += 35; reasons.push("Strong Under 6"); }
     else if (percentages.under_6 >= 61) { confidence += 15; reasons.push("Moderate Under 6"); }
-    
     if (percentages.even >= 56 || percentages.even <= 44) { confidence += 15; reasons.push("Strong Even/Odd Bias"); }
     if (chiSquare.pValue < 0.01) { confidence += 20; reasons.push("Strong Statistical Bias"); }
     else if (chiSquare.pValue < 0.05) { confidence += 10; reasons.push("Statistical Bias"); }
-    
-    const hotDigits = [];
-    for(let i=0; i<10; i++){
-        if(percentages[`digit_${i}`] >= 14){
-            hotDigits.push(i);
-        }
-    }
+    const hotDigits = counts.map((c, i) => ({ c, i })).filter(d => (d.c / total) * 100 >= 14).map(d => d.i);
     if(hotDigits.length > 0) { confidence += 15; reasons.push("Hot Digit(s)"); }
-
 
     return {
         symbol,
@@ -107,354 +95,198 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
     'JD75': { name: 'Jump 75', type: 'jump' },
     'JD100': { name: 'Jump 100', type: 'jump' },
 };
-
-
 // --- End of Analysis Logic ---
 
-
 const SignalArena = () => {
-  const { api, isConnected, subscribeToMessages, status: apiStatus } = useDerivApi();
-  const [tickData, setTickData] = useState<{ [key: string]: number[] }>({});
-  const [analysisData, setAnalysisData] = useState<{ [key: string]: any }>({});
-  const [displayedCards, setDisplayedCards] = useState<any[]>([]);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [tickCount, setTickCount] = useState(0);
-  const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
-  const subscriptionIds = useRef<{ [key: string]: string }>({});
-  const subscribedSymbols = useRef(new Set<string>());
-
-  const extractLastDigit = useCallback((price: number) => {
-      const priceStr = price.toString();
-      return parseInt(priceStr[priceStr.length - 1]);
-  }, []);
-
-  const FILTERS = React.useMemo(() => {
-    return {
-      'all': Object.keys(SYMBOL_CONFIG),
-      'strong': [], // This will be dynamically populated
-      'over3': [], // Dynamic
-      'under6': [], // Dynamic
-      'volatility': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'volatility'),
-      'jump': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'jump'),
-    };
-  }, []);
-
-  const [visibleSymbols, setVisibleSymbols] = useState<string[]>(FILTERS.all);
-
-  const filterAndSortData = useCallback(() => {
-    let filteredData = Object.values(analysisData).filter(d => d !== null);
-
-    if (activeFilter !== 'all') {
-      filteredData = filteredData.filter(d => {
-        if (!d) return false;
-        if (activeFilter === 'strong') return d.strong_signal;
-        if (activeFilter === 'over3') return d.percentages.over_3 >= 66;
-        if (activeFilter === 'under6') return d.percentages.under_6 >= 66;
-        if (activeFilter === 'volatility') return SYMBOL_CONFIG[d.symbol]?.type === 'volatility';
-        if (activeFilter === 'jump') return SYMBOL_CONFIG[d.symbol]?.type === 'jump';
-        return true;
-      });
-    }
-
-    filteredData.sort((a, b) => (b?.confidence ?? 0) - (a?.confidence ?? 0));
-    setDisplayedCards(filteredData as any[]);
-  }, [activeFilter, analysisData]);
-
-  const handleSetFilter = (filter: string) => {
-    setActiveFilter(filter);
-    const newVisibleSymbols = FILTERS[filter as keyof typeof FILTERS] || FILTERS.all;
-    setVisibleSymbols(newVisibleSymbols);
-  };
-  
-  // Subscribe and unsubscribe based on visible symbols
-  useEffect(() => {
-    if (!api || !isConnected) return;
-
-    const symbolsToSubscribe = new Set(visibleSymbols.filter(s => !subscribedSymbols.current.has(s)));
-
-    symbolsToSubscribe.forEach(symbol => {
-      api.send(JSON.stringify({
-        ticks_history: symbol,
-        end: "latest",
-        count: 100,
-        style: "ticks",
-        subscribe: 1
-      }));
-      subscribedSymbols.current.add(symbol);
-    });
-
-  }, [visibleSymbols, api, isConnected]);
-
-
-  const handleMessage = useCallback((data: any) => {
-    if (data.error || (!data.tick && !data.history)) return;
+    const { api, isConnected, subscribeToMessages, status: apiStatus } = useDerivApi();
+    const [tickData, setTickData] = useState<{ [key: string]: number[] }>({});
+    const [analysisData, setAnalysisData] = useState<{ [key: string]: any }>({});
+    const [displayedCards, setDisplayedCards] = useState<any[]>([]);
+    const [activeFilter, setActiveFilter] = useState('all');
+    const [tickCount, setTickCount] = useState(0);
+    const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
     
-    let symbol: string | undefined;
-    if (data.tick) {
-        symbol = data.tick.symbol;
-    } else if (data.history) {
-        // Find symbol from subscription id
-        for (const s in subscriptionIds.current) {
-            if (subscriptionIds.current[s] === data.subscription.id) {
-                symbol = s;
-                break;
+    const subscribedSymbols = useRef(new Set<string>());
+
+    const extractLastDigit = useCallback((price: number) => {
+        const priceStr = price.toString();
+        return parseInt(priceStr[priceStr.length - 1]);
+    }, []);
+
+    const FILTERS = React.useMemo(() => ({
+        'all': Object.keys(SYMBOL_CONFIG),
+        'strong': [], // Populated dynamically
+        'over3': [], // Populated dynamically
+        'under6': [], // Populated dynamically
+        'volatility': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'volatility'),
+        'jump': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'jump'),
+    }), []);
+
+    const filterAndSortData = useCallback(() => {
+        let filteredData = Object.values(analysisData).filter(d => d !== null);
+        if (activeFilter !== 'all') {
+            filteredData = filteredData.filter(d => {
+                if (!d) return false;
+                if (activeFilter === 'strong') return d.strong_signal;
+                if (activeFilter === 'over3') return d.percentages.over_3 >= 66;
+                if (activeFilter === 'under6') return d.percentages.under_6 >= 66;
+                if (activeFilter === 'volatility') return SYMBOL_CONFIG[d.symbol]?.type === 'volatility';
+                if (activeFilter === 'jump') return SYMBOL_CONFIG[d.symbol]?.type === 'jump';
+                return true;
+            });
+        }
+        filteredData.sort((a, b) => (b?.confidence ?? 0) - (a?.confidence ?? 0));
+        setDisplayedCards(filteredData);
+    }, [activeFilter, analysisData]);
+
+    useEffect(() => {
+        if (!api || !isConnected) return;
+        const symbolsToSubscribe = new Set(Object.keys(SYMBOL_CONFIG));
+        symbolsToSubscribe.forEach(symbol => {
+            if (!subscribedSymbols.current.has(symbol)) {
+                api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+                subscribedSymbols.current.add(symbol);
             }
-        }
-        if (!symbol && data.echo_req.ticks_history) {
-          symbol = data.echo_req.ticks_history;
-        }
-    } else if (data.subscription) {
-       for (const s in subscriptionIds.current) {
-            if (subscriptionIds.current[s] === data.subscription.id) {
-                symbol = s;
-                break;
-            }
-        }
-    }
+        });
+    }, [api, isConnected]);
 
-    if (!symbol || !subscribedSymbols.current.has(symbol)) return;
+    const handleMessage = useCallback((data: any) => {
+        if (data.error || !data.tick) return;
+        
+        const symbol = data.tick.symbol;
+        if (!subscribedSymbols.current.has(symbol)) return;
 
+        setTickCount(prev => prev + 1);
 
-    setTickCount(prev => prev + 1);
-
-    if (data.history) { // Historical data
-      const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p)));
-      setTickData(prev => ({...prev, [symbol!]: [...(prev[symbol!] || []), ...newDigits].slice(-500)}));
-    }
-
-    if (data.tick) { // Live tick data
         const newDigit = extractLastDigit(parseFloat(data.tick.quote));
         setTickData(prev => {
-            const currentTicks = prev[symbol!] || [];
-            const updatedTicks = [...currentTicks, newDigit];
-            if (updatedTicks.length > 500) {
-                updatedTicks.shift();
-            }
-            return { ...prev, [symbol!]: updatedTicks };
+            const updatedTicks = [...(prev[symbol] || []), newDigit];
+            if (updatedTicks.length > 500) updatedTicks.shift();
+            return { ...prev, [symbol]: updatedTicks };
         });
-    }
+    }, [extractLastDigit]);
 
-    if (data.subscription) {
-        subscriptionIds.current[symbol] = data.subscription.id;
-    }
-}, [extractLastDigit]);
+    useEffect(() => {
+        const unsubscribe = subscribeToMessages(handleMessage);
+        return () => unsubscribe();
+    }, [handleMessage, subscribeToMessages]);
 
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const updatedAnalysis: { [key: string]: any } = {};
+            for (const symbol of subscribedSymbols.current) {
+                const digits = tickData[symbol];
+                if (digits) {
+                    const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol].name);
+                    if (result) updatedAnalysis[symbol] = result;
+                }
+            }
+            setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
+            setUpdateTime(new Date().toLocaleTimeString());
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [tickData]);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToMessages(handleMessage);
-    return () => unsubscribe();
-  }, [handleMessage, subscribeToMessages]);
+    useEffect(() => {
+        filterAndSortData();
+    }, [analysisData, activeFilter, filterAndSortData]);
 
-  // Analysis loop
-  useEffect(() => {
-      const interval = setInterval(() => {
-          const updatedAnalysis: { [key: string]: any } = {};
-          for (const symbol of subscribedSymbols.current) {
-              const digits = tickData[symbol];
-              if (digits) {
-                  const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol].name);
-                  if (result) {
-                      updatedAnalysis[symbol] = result;
-                  }
-              }
-          }
-          setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
-          setUpdateTime(new Date().toLocaleTimeString());
-      }, 1000); // Analyze every 1 second
-
-      return () => clearInterval(interval);
-  }, [tickData]);
-
-  useEffect(() => {
-    filterAndSortData();
-  }, [analysisData, activeFilter, filterAndSortData]);
-
-
-  // --- JSX Rendering ---
-  
     const renderCard = (card: any) => {
         if (!card) return null;
-
         const confidenceClass = card.confidence >= 70 ? 'confidence-high' : card.confidence >= 40 ? 'confidence-medium' : 'confidence-low';
         const biasClass = card.chi_square.interpretation.includes('STRONG') ? 'bias-strong' : card.chi_square.interpretation.includes('Bias') ? 'bias-detected' : 'bias-fair';
-        
         const getSignalClass = (value: number, type: 'over_under' | 'even_odd') => {
-            if(type === 'over_under'){
-                if (value >= 66) return 'signal-strong';
-                if (value >= 61) return 'signal-moderate';
-            } else { // even_odd
-                if (value >= 56 || value <= 44) return 'signal-strong';
-                if ((value >= 53 && value < 56) || (value > 44 && value <= 47)) return 'signal-moderate';
+            if (type === 'over_under') {
+                if (value >= 66) return 'signal-strong'; if (value >= 61) return 'signal-moderate';
+            } else {
+                if (value >= 56 || value <= 44) return 'signal-strong'; if ((value >= 53 && value < 56) || (value > 44 && value <= 47)) return 'signal-moderate';
             }
             return 'signal-weak';
         };
-
         const getDigitClass = (pct: number) => {
-            if (pct >= 14) return 'signal-digit-hot';
-            if (pct >= 11) return 'signal-digit-warm';
-            return '';
+            if (pct >= 14) return 'signal-digit-hot'; if (pct >= 11) return 'signal-digit-warm'; return '';
         };
-
         const runBot = (symbol: string, direction: string) => {
             if (!confirm(`Start ${direction.toUpperCase()} bot for ${symbol}?\n\nBase stake: $1.00\nStop loss: $50.00 daily`)) return;
             alert(`Bot started for ${symbol} (${direction})\n\nRisk management active:\n• $50 daily loss limit\n• 30s cooldown per symbol\n• Max 3 concurrent trades`);
         };
-
         return (
              <div key={card.symbol} className="signal-card">
                 <div className="signal-card-header">
-                    <div className="signal-symbol-info">
-                        <h3>{card.name}</h3>
-                        <div className="symbol">{card.symbol}</div>
-                    </div>
+                    <div className="signal-symbol-info"><h3>{card.name}</h3><div className="symbol">{card.symbol}</div></div>
                     <div className={cn("signal-confidence-badge", confidenceClass)}>{card.confidence}%</div>
                 </div>
-
                 <div className="signal-signals-grid">
-                    <div className="signal-signal-item">
-                        <div className="signal-signal-label">Over 3</div>
-                        <div className={cn("signal-signal-value", getSignalClass(card.percentages.over_3, 'over_under'))}>
-                            {card.percentages.over_3.toFixed(1)}%
-                        </div>
-                    </div>
-                    <div className="signal-signal-item">
-                        <div className="signal-signal-label">Under 6</div>
-                        <div className={cn("signal-signal-value", getSignalClass(card.percentages.under_6, 'over_under'))}>
-                            {card.percentages.under_6.toFixed(1)}%
-                        </div>
-                    </div>
-                     <div className="signal-signal-item">
-                        <div className="signal-signal-label">Even</div>
-                        <div className={cn("signal-signal-value", getSignalClass(card.percentages.even, 'even_odd'))}>
-                            {card.percentages.even.toFixed(1)}%
-                        </div>
-                    </div>
-                    <div className="signal-signal-item">
-                        <div className="signal-signal-label">Odd</div>
-                        <div className={cn("signal-signal-value", getSignalClass(card.percentages.odd, 'even_odd'))}>
-                            {card.percentages.odd.toFixed(1)}%
-                        </div>
-                    </div>
+                    <div className="signal-signal-item"><div className="signal-signal-label">Over 3</div><div className={cn("signal-signal-value", getSignalClass(card.percentages.over_3, 'over_under'))}>{card.percentages.over_3.toFixed(1)}%</div></div>
+                    <div className="signal-signal-item"><div className="signal-signal-label">Under 6</div><div className={cn("signal-signal-value", getSignalClass(card.percentages.under_6, 'over_under'))}>{card.percentages.under_6.toFixed(1)}%</div></div>
+                    <div className="signal-signal-item"><div className="signal-signal-label">Even</div><div className={cn("signal-signal-value", getSignalClass(card.percentages.even, 'even_odd'))}>{card.percentages.even.toFixed(1)}%</div></div>
+                    <div className="signal-signal-item"><div className="signal-signal-label">Odd</div><div className={cn("signal-signal-value", getSignalClass(card.percentages.odd, 'even_odd'))}>{card.percentages.odd.toFixed(1)}%</div></div>
                 </div>
-
-                <div className="signal-stats-row">
-                    <div className="signal-chi-square">
-                        χ²: {card.chi_square.chi2.toFixed(2)}, p: {card.chi_square.pValue.toFixed(3)}
-                    </div>
-                    <div className={cn("signal-bias-indicator", biasClass)}>
-                        {card.chi_square.interpretation}
-                    </div>
-                </div>
-
-                {card.reasons.length > 0 && (
-                    <div className="signal-reasons">
-                        {card.reasons.map((reason: string) => <span key={reason} className="signal-reason-tag">{reason}</span>)}
-                    </div>
-                )}
-
+                <div className="signal-stats-row"><div className="signal-chi-square">χ²: {card.chi_square.chi2.toFixed(2)}, p: {card.chi_square.pValue.toFixed(3)}</div><div className={cn("signal-bias-indicator", biasClass)}>{card.chi_square.interpretation}</div></div>
+                {card.reasons.length > 0 && <div className="signal-reasons">{card.reasons.map((reason: string) => <span key={reason} className="signal-reason-tag">{reason}</span>)}</div>}
                 <div className="signal-digits-table">
                     {Array.from({ length: 10 }).map((_, i) => (
                         <div key={i} className={cn("signal-digit-cell", getDigitClass(card.percentages[`digit_${i}`]))}>
-                            <div className="signal-digit-label">{i}</div>
-                            <div className="signal-digit-value">{card.percentages[`digit_${i}`].toFixed(1)}%</div>
+                            <div className="signal-digit-label">{i}</div><div className="signal-digit-value">{card.percentages[`digit_${i}`].toFixed(1)}%</div>
                         </div>
                     ))}
                 </div>
-
                 <div className="signal-card-footer">
-                    <div className="signal-hot-digits">
-                        <span>🔥 Hot Digits:</span>
-                        <span>{card.hot_digits.length > 0 ? card.hot_digits.join(', ') : 'None'}</span>
-                    </div>
+                    <div className="signal-hot-digits"><span>🔥 Hot Digits:</span><span>{card.hot_digits.length > 0 ? card.hot_digits.join(', ') : 'None'}</span></div>
                     <div className="signal-bot-buttons">
-                        <button className="signal-bot-btn signal-bot-over" disabled={card.percentages.over_3 < 66} onClick={() => runBot(card.symbol, 'over')}>
-                            <Bot className="h-4 w-4" /> OVER
-                        </button>
-                         <button className="signal-bot-btn signal-bot-under" disabled={card.percentages.under_6 < 66} onClick={() => runBot(card.symbol, 'under')}>
-                            <Bot className="h-4 w-4" /> UNDER
-                        </button>
+                        <button className="signal-bot-btn signal-bot-over" disabled={card.percentages.over_3 < 66} onClick={() => runBot(card.symbol, 'over')}><Bot className="h-4 w-4" /> OVER</button>
+                        <button className="signal-bot-btn signal-bot-under" disabled={card.percentages.under_6 < 66} onClick={() => runBot(card.symbol, 'under')}><Bot className="h-4 w-4" /> UNDER</button>
                     </div>
                 </div>
-                 <div className="signal-update-time">
-                    Ticks: {card.ticks_analyzed} • Updated: {new Date(card.update_time).toLocaleTimeString()}
-                </div>
+                <div className="signal-update-time">Ticks: {card.ticks_analyzed} • Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
             </div>
         );
     }
     
-  const renderContent = () => {
-    if (!isConnected) {
-      return (
-        <div className="signal-loading">
-          <div className="signal-loading-spinner"></div>
-          <p>Connecting to Deriv API...</p>
-          <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '8px' }}>
-            Please ensure you are connected in the main header.
-          </p>
-        </div>
-      );
-    }
+    const renderContent = () => {
+        if (!isConnected) {
+            return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Connecting to Deriv API...</p></div>;
+        }
 
-    if (displayedCards.length > 0) {
-      return displayedCards.map(card => renderCard(card));
-    }
+        const visibleCards = displayedCards.filter(card => (tickData[card.symbol]?.length || 0) >= 100);
+        const loadingCards = FILTERS[activeFilter as keyof typeof FILTERS].filter(symbol => (tickData[symbol]?.length || 0) < 100);
 
-    // Check if there's any tick data at all for the visible symbols
-    const hasAnyTickData = visibleSymbols.some(symbol => tickData[symbol] && tickData[symbol].length > 0);
+        if (visibleCards.length === 0 && loadingCards.length === 0) {
+            return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Subscribing to '{activeFilter}' markets...</p></div>;
+        }
 
-    if (hasAnyTickData) {
-      return (
-        <div className="signal-loading">
-          <div className="signal-loading-spinner"></div>
-          <p>Collecting initial ticks for analysis...</p>
-          <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '8px' }}>
-            Need 100 ticks per market to start analysis.
-          </p>
-        </div>
-      );
-    }
+        return (
+            <>
+                {visibleCards.map(card => renderCard(card))}
+                {loadingCards.map(symbol => (
+                    <div key={symbol} className="signal-card">
+                        <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol].name}</h3><div className="symbol">{symbol}</div></div></div>
+                        <div className="signal-loading" style={{padding: '20px 0'}}>
+                            <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
+                            <p style={{fontSize: '0.875rem'}}>Collecting live ticks... ({(tickData[symbol]?.length || 0)}/100)</p>
+                        </div>
+                    </div>
+                ))}
+            </>
+        );
+    };
 
     return (
-      <div className="signal-loading">
-        <div className="signal-loading-spinner"></div>
-        <p>Subscribing to '{activeFilter}' markets...</p>
-      </div>
-    );
-  };
-
-  return (
         <div className="signal-center-body">
             <div className="signal-center-container">
-                <div className="signal-center-header">
-                    <h1><span>🎯</span> Deriv Digit Signal Center</h1>
-                    <div className="signal-status-bar">
-                        <div className="signal-status-indicator">
-                            <div className={cn("signal-status-dot", { 'connected': isConnected })}></div>
-                            <span>{apiStatus}</span>
-                        </div>
-                        <span>Ticks: {tickCount}</span>
-                        <span>{updateTime}</span>
-                    </div>
-                </div>
-
+                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Ticks: {tickCount}</span><span>{updateTime}</span></div></div>
                 <div className="signal-risk-panel">
-                    <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div>
-                    <div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
-                    <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div>
-                    <div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
+                    <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
+                    <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
                 </div>
-                
                 <div className="signal-filters">
                     {Object.keys(FILTERS).map(filter => (
-                        <button key={filter} className={cn("signal-filter-btn", { 'active': activeFilter === filter })} onClick={() => handleSetFilter(filter)}>
+                        <button key={filter} className={cn("signal-filter-btn", { 'active': activeFilter === filter })} onClick={() => setActiveFilter(filter)}>
                             {filter.charAt(0).toUpperCase() + filter.slice(1)}
                         </button>
                     ))}
                 </div>
-
-                <div className="signal-cards-grid">
-                    {renderContent()}
-                </div>
+                <div className="signal-cards-grid">{renderContent()}</div>
             </div>
         </div>
     );
