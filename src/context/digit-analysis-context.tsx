@@ -193,7 +193,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         if (!silent) {
             updateStatus('disconnected', 'Disconnected');
         } else {
-             updateStatus('disconnected', 'Click Connect to start');
+             updateStatus('stopped', 'Click Connect to start');
         }
         setIsCollecting(false);
     }, []);
@@ -214,11 +214,13 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
     const connect = useCallback((market = currentMarket) => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            // If already connected and open, just resubscribe
             if (subscriptionId.current) {
                 ws.current.send(JSON.stringify({ forget: subscriptionId.current }));
             }
-            ws.current.send(JSON.stringify({ ticks: market, subscribe: 1 }));
+            resetData();
             setCurrentMarket(market);
+            fetchHistoricalData(market); // Re-fetch history for new market
             return;
         }
 
@@ -256,11 +258,13 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
                     newDigits.push(digit);
                     processTick({ price, digit, timestamp: Date.now() }, true);
                 });
-                setLastDigits(prev => [...prev, ...newDigits].slice(-10));
+                
+                setLastDigits(prev => [...prev, ...newDigits].slice(-20)); // Keep a bit more history initially
                 setCollectedCount(prices.length);
                 setIsCollecting(false);
                 updateStatus('connected', 'Real-time monitoring active');
                 ws.current?.send(JSON.stringify({ ticks: market, subscribe: 1 }));
+
             } else if (data.tick) {
                 const newTick = {
                     price: parseFloat(data.tick.quote),
@@ -280,7 +284,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
         ws.current.onclose = () => {
             if (status !== 'disconnected') {
-              updateStatus('disconnected', 'Disconnected. Click Connect to start');
+              updateStatus('disconnected', 'Click Connect to start');
             }
             ws.current = null;
         };
@@ -288,7 +292,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     
     const handleMarketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newMarket = e.target.value;
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        if (status !== 'disconnected' && status !== 'stopped') {
             disconnect(true); // Silently disconnect
             connect(newMarket); // Connect to the new market
         } else {
@@ -341,5 +345,3 @@ export const useDigitAnalysis = () => {
     }
     return context;
 };
-
-    

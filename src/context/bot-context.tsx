@@ -90,6 +90,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const openContractsRef = useRef(new Map<number, {stake: number}>());
   const tradeLogRef = useRef<HTMLDivElement>(null);
   const consecutiveLossesRef = useRef(0);
+  const waitingForEntryRef = useRef(false);
 
   useEffect(() => {
     totalProfitRef.current = totalProfit;
@@ -97,7 +98,9 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   
   const stopBot = useCallback((showToast = true) => {
     if (!isRunningRef.current && botStatus === 'idle') return;
+    
     isRunningRef.current = false;
+    waitingForEntryRef.current = false;
     setBotStatus('stopped');
 
     if(digitStatus !== 'disconnected') {
@@ -160,6 +163,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
     const config = configRef.current;
     
+    waitingForEntryRef.current = false;
     setBotStatus('running');
 
     const contractType = getContractType(config.predictionType);
@@ -371,8 +375,9 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     }, 100);
 
     if (config.useEntryPoint) {
+      waitingForEntryRef.current = true;
       setBotStatus('waiting');
-      if (digitStatus === 'disconnected') {
+      if (digitStatus === 'disconnected' || digitStatus === 'stopped') {
         connectDigit(config.market);
       }
     } else {
@@ -390,37 +395,38 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   }, [api, isConnected, purchaseContract, toast, connectDigit, digitStatus]);
 
   useEffect(() => {
-    if (botStatus !== 'waiting' || !isRunningRef.current || !configRef.current?.useEntryPoint) return;
-  
+    if (!waitingForEntryRef.current || !isRunningRef.current || !configRef.current?.useEntryPoint) return;
+    
     const config = configRef.current;
-  
+    if (!config) return;
+
+    if (lastDigits.length === 0) return;
+    const lastDigit = lastDigits[lastDigits.length - 1];
+
+    let conditionMet = false;
     if (config.entryPointType === 'single') {
       const entryDigit = config.entryRangeStart ?? 0;
-      const lastDigit = lastDigits[lastDigits.length - 1];
       if (lastDigit === entryDigit) {
-        purchaseContract();
-        // Stop waiting after purchase
-        if(isRunningRef.current) setBotStatus('running');
-        // Since we are no longer waiting for an entry point, we can stop the digit analysis subscription
-        if (digitStatus !== 'disconnected') {
-            disconnectDigit(true);
-        }
+        conditionMet = true;
       }
     } else if (config.entryPointType === 'consecutive' && lastDigits.length >= 2) {
       const start = config.entryRangeStart ?? 0;
       const end = config.entryRangeEnd ?? 9;
       const lastTwo = lastDigits.slice(-2);
       if (lastTwo.every(digit => digit >= start && digit <= end)) {
-        purchaseContract();
-        // Stop waiting after purchase
-        if(isRunningRef.current) setBotStatus('running');
-        // Since we are no longer waiting for an entry point, we can stop the digit analysis subscription
-        if (digitStatus !== 'disconnected') {
-            disconnectDigit(true);
-        }
+        conditionMet = true;
       }
     }
-  }, [lastDigits, botStatus, purchaseContract, digitStatus, disconnectDigit]);
+
+    if (conditionMet) {
+      purchaseContract();
+      // This will now be set to false inside purchaseContract
+      // waitingForEntryRef.current = false; 
+      if (digitStatus !== 'disconnected') {
+          disconnectDigit(true);
+      }
+    }
+  }, [lastDigits, purchaseContract, digitStatus, disconnectDigit]);
 
   const isBotRunning = (botStatus === 'running' || botStatus === 'waiting') && isRunningRef.current;
 
@@ -457,9 +463,3 @@ export const useBot = () => {
   }
   return context;
 };
-
-    
-    
-    
-
-    
