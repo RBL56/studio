@@ -5,6 +5,7 @@ import Header from '@/components/header';
 import { DerivApiProvider } from '@/context/deriv-api-context';
 import { ThemeProvider } from '@/components/theme-provider';
 import { DigitAnalysisProvider } from '@/context/digit-analysis-context';
+import DraggableDisclaimer from '@/components/draggable-disclaimer';
 
 
 export const metadata: Metadata = {
@@ -57,11 +58,7 @@ export default function RootLayout({
               <div className="relative flex min-h-screen flex-col">
                 <Header />
                 <main className="flex-1">{children}</main>
-                <footer className="app-footer">
-                  <div className="container">
-                    <p><strong>Disclaimer:</strong> Trading synthetic indices involves substantial risk and is not suitable for all investors. The tools and information provided on this site are for educational and informational purposes only. Past performance is not indicative of future results. You are solely responsible for any trading decisions you make. Never trade with money you cannot afford to lose.</p>
-                  </div>
-                </footer>
+                <DraggableDisclaimer />
               </div>
               <Toaster />
             </DigitAnalysisProvider>

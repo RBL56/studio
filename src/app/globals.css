@@ -83,14 +83,16 @@
   }
 }
 
-/* App Footer */
-.app-footer {
-    @apply mt-auto py-6 bg-muted text-muted-foreground;
+/* Draggable Disclaimer */
+.draggable-disclaimer {
+    @apply fixed z-50 p-4 rounded-lg shadow-lg cursor-move;
+    @apply bg-background/80 backdrop-blur-sm border border-border;
+    @apply max-w-sm;
 }
-.app-footer p {
-    @apply text-xs text-center;
+.draggable-disclaimer p {
+    @apply text-xs text-muted-foreground;
 }
-.app-footer strong {
+.draggable-disclaimer strong {
     @apply font-semibold text-foreground;
 }
 
