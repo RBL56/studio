@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
@@ -236,15 +237,22 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const entryDigit = entryTick ? extractLastDigit(entryTick, contract.underlying) : undefined;
         const exitTick = contract.exit_tick;
         const exitDigit = exitTick ? extractLastDigit(exitTick, contract.underlying) : undefined;
-
-        setTrades(prev => prev.map(t => t.id === contractId ? {
-            ...t,
-            payout: contract.payout,
-            isWin,
-            entryDigit,
-            exitTick,
-            exitDigit
-        } : t));
+        
+        setTrades(prevTrades => {
+            const newTrades = [...prevTrades];
+            const tradeIndex = newTrades.findIndex(t => t.id === contractId);
+            if (tradeIndex !== -1) {
+                newTrades[tradeIndex] = {
+                    ...newTrades[tradeIndex],
+                    payout: contract.payout,
+                    isWin,
+                    entryDigit,
+                    exitTick,
+                    exitDigit
+                };
+            }
+            return newTrades;
+        });
 
         setTotalProfit(newTotalProfit);
 
@@ -367,7 +375,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       const start = config.entryRangeStart ?? 0;
       const end = config.entryRangeEnd ?? 9;
       const lastTwo = lastDigits.slice(-2);
-      if (lastTwo[0] >= start && lastTwo[0] <= end && lastTwo[1] >= start && lastTwo[1] <= end) {
+      if (lastTwo.every(digit => digit >= start && digit <= end)) {
         purchaseContract();
         // Stop waiting after purchase
         if(isRunningRef.current) setBotStatus('running');
@@ -415,4 +423,5 @@ export const useBot = () => {
   return context;
 };
 
+    
     
