@@ -42,11 +42,11 @@ function BotBuilderContent() {
   };
 
   return (
-    <div className={cn("py-4 md:py-8 md:px-4")}>
+    <div className={cn("py-4 md:py-8")}>
         {isConnected ? (
           <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
               <ScrollArea className="w-full whitespace-nowrap pb-4 px-4 md:px-0">
-                  <TabsList className="grid w-full grid-cols-4 mb-6 min-w-[700px]">
+                  <TabsList className="inline-grid w-full grid-cols-4 mb-6 min-w-[700px]">
                       <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                       <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
                       <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
