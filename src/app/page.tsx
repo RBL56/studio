@@ -78,7 +78,7 @@ export default function BotBuilderPage() {
                     </Tabs>
                 </TabsContent>
 
-                <TabsContent value="dcircle" forceMount>
+                <TabsContent value="dcircle">
                   <ScrollArea className="h-[calc(100vh-250px)]">
                     <div className="space-y-8 pr-4">
                         <QuickTradePanel />
@@ -87,7 +87,7 @@ export default function BotBuilderPage() {
                   </ScrollArea>
                 </TabsContent>
 
-                <TabsContent value="trading-view" forceMount>
+                <TabsContent value="trading-view">
                     <div className="space-y-8">
                         <QuickTradePanel />
                         <div className="w-full rounded-md overflow-hidden border h-[70vh]">
