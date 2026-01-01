@@ -13,17 +13,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { KeyRound, LogOut, Loader2 } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useDerivApi } from '@/context/deriv-api-context';
-import { BalanceDisplay } from './balance-display';
 
 export function ApiTokenDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
-  const { isConnected, connect, disconnect } = useDerivApi();
+  const { connect } = useDerivApi();
 
   const handleConnect = async () => {
     if (tokenInput) {
@@ -53,26 +52,6 @@ export function ApiTokenDialog() {
         });
     }
   };
-
-  const handleLogout = () => {
-    disconnect();
-    toast({
-        title: "Logged Out",
-        description: "You have been disconnected from your Deriv account.",
-    });
-  }
-
-  if (isConnected) {
-    return (
-        <div className="flex items-center gap-4">
-            <BalanceDisplay />
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-            </Button>
-        </div>
-    )
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

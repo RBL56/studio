@@ -21,13 +21,21 @@ export const marketConfig: { [key: string]: { decimals: number } } = {
     '1HZ250V': { decimals: 2 },
 };
 
+interface Account {
+  loginid: string;
+  is_virtual: boolean;
+  currency: string;
+  balance: number;
+  token: string;
+}
+
 interface DerivApiContextType {
   isConnected: boolean;
-  token: string | null;
-  balance: number | null;
-  accountType: 'real' | 'demo' | null;
+  activeAccount: Account | null;
+  accountList: Account[];
   connect: (token: string) => Promise<void>;
   disconnect: () => void;
+  switchAccount: (loginid: string) => Promise<void>;
   api: WebSocket | null;
   subscribeToMessages: (handler: (data: any) => void) => () => void;
   marketConfig: { [key: string]: { decimals: number } };
@@ -35,21 +43,28 @@ interface DerivApiContextType {
 
 const DerivApiContext = createContext<DerivApiContextType | undefined>(undefined);
 
-// This is your application's unique ID from Deriv. It's loaded from the .env file.
 const APP_ID = '106684';
 
 // Simple obfuscation for the token in local storage
-const encode = (str: string) => btoa(str);
-const decode = (str: string) => atob(str);
+const encode = (data: object) => btoa(JSON.stringify(data));
+const decode = (str: string): object | null => {
+    try {
+        return JSON.parse(atob(str));
+    } catch (e) {
+        return null;
+    }
+};
+
 
 export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(null);
-  const [balance, setBalance] = useState<number | null>(null);
+  const [activeAccount, setActiveAccount] = useState<Account | null>(null);
+  const [accountList, setAccountList] = useState<Account[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [accountType, setAccountType] = useState<'real' | 'demo' | null>(null);
+  
   const ws = useRef<WebSocket | null>(null);
   const messageHandlers = useRef<Set<(data: any) => void>>(new Set());
   const { toast } = useToast();
+  const accountsRef = useRef<Map<string, Account>>(new Map());
 
   const handleGlobalMessage = (data: any) => {
     if (data.error) {
@@ -63,8 +78,11 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (data.msg_type === 'balance') {
-      setBalance(data.balance.balance);
+    if (data.msg_type === 'balance' && data.balance.accounts) {
+        const updatedBalance = data.balance.accounts[data.balance.loginid]?.balance;
+        if(updatedBalance !== undefined) {
+            setActiveAccount(prev => prev ? {...prev, balance: updatedBalance} : null);
+        }
     }
 
     messageHandlers.current.forEach(handler => handler(data));
@@ -76,85 +94,161 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
       messageHandlers.current.delete(handler);
     };
   };
-
-  const connect = useCallback(async (apiToken: string) => {
-    if (!APP_ID || APP_ID === 'your_app_id_goes_here') {
-      toast({
-        variant: "destructive",
-        title: "Configuration Error",
-        description: "Deriv App ID is not set. Please add it to your .env file.",
-      });
-      return Promise.reject(new Error('Deriv App ID not set.'));
-    }
-
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.close();
-    }
-
-    ws.current = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`);
-    const socket = ws.current;
-
-    return new Promise<void>((resolve, reject) => {
-      socket.onopen = () => {
-        socket.send(JSON.stringify({ authorize: apiToken }));
-      };
-
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.msg_type === 'authorize') {
-            if (data.authorize) {
-                setToken(apiToken);
-                localStorage.setItem('deriv_token', encode(apiToken));
-                setIsConnected(true);
-                setBalance(data.authorize.balance);
-                setAccountType(data.authorize.is_virtual ? 'demo' : 'real');
-                socket.send(JSON.stringify({ balance: 1, subscribe: 1 }));
-                socket.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
-                resolve();
-            } else {
-                localStorage.removeItem('deriv_token');
-                reject(new Error(data.error?.message || 'Authorization failed.'));
-            }
-        }
-        
-        handleGlobalMessage(data);
-      };
-
-      socket.onclose = () => {
-        setIsConnected(false);
-        setToken(null);
-        setBalance(null);
-        setAccountType(null);
-      };
-      
-      socket.onerror = (error) => {
-        reject(new Error('WebSocket connection error.'));
-        setIsConnected(false);
-      };
-    });
-  }, [toast]);
-
+  
   const disconnect = useCallback(() => {
     if (ws.current) {
       ws.current.close();
-      ws.current = null;
     }
-    localStorage.removeItem('deriv_token');
+    localStorage.removeItem('deriv_session');
+    setActiveAccount(null);
+    setAccountList([]);
+    accountsRef.current.clear();
+    setIsConnected(false);
+    ws.current = null;
   }, []);
+  
+  const connectAndAuthorize = useCallback(async (token: string, isInitialConnect = false): Promise<Account> => {
+    if (!APP_ID) {
+      throw new Error('Deriv App ID not set.');
+    }
+    
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+        ws.current = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`);
+    }
+    const socket = ws.current;
+
+    return new Promise<Account>((resolve, reject) => {
+      
+      const onOpen = () => {
+          socket.send(JSON.stringify({ authorize: token }));
+      }
+      
+      const onMessage = (event: MessageEvent) => {
+          const data = JSON.parse(event.data);
+
+          if (data.msg_type === 'authorize') {
+              if (data.authorize) {
+                  const authorizedAccount: Account = {
+                      loginid: data.authorize.loginid,
+                      is_virtual: !!data.authorize.is_virtual,
+                      currency: data.authorize.currency,
+                      balance: data.authorize.balance,
+                      token: token,
+                  };
+
+                  if (isInitialConnect) {
+                    const allAccounts = data.authorize.account_list.map((acc: any) => {
+                        const loginid = acc.loginid;
+                        const correspondingToken = accountsRef.current.get(loginid)?.token;
+                        return {
+                            ...acc,
+                            token: correspondingToken || (loginid === authorizedAccount.loginid ? token : ''),
+                        };
+                    });
+                    
+                    allAccounts.forEach((acc: Account) => accountsRef.current.set(acc.loginid, acc));
+                    setAccountList(allAccounts);
+                  }
+                  
+                  setActiveAccount(authorizedAccount);
+                  setIsConnected(true);
+
+                  // Set active session for persistence
+                  const session = { activeLoginid: authorizedAccount.loginid, accounts: Array.from(accountsRef.current.values()) };
+                  localStorage.setItem('deriv_session', encode(session));
+
+                  socket.send(JSON.stringify({ balance: 1, subscribe: 1, account: 'all' }));
+                  socket.send(JSON.stringify({ proposal_open_contract: 1, subscribe: 1 }));
+                  
+                  // Clean up these specific listeners after authorization
+                  socket.removeEventListener('open', onOpen);
+                  socket.removeEventListener('message', onMessage);
+
+                  // Attach global message handler
+                  socket.addEventListener('message', (e) => handleGlobalMessage(JSON.parse(e.data)));
+                  resolve(authorizedAccount);
+              } else {
+                  reject(new Error(data.error?.message || 'Authorization failed.'));
+              }
+          }
+      };
+
+      socket.onclose = () => {
+          setIsConnected(false);
+          setActiveAccount(null);
+      };
+      
+      socket.onerror = (error) => {
+          console.error("WebSocket Error:", error);
+          reject(new Error('WebSocket connection error.'));
+          setIsConnected(false);
+      };
+
+      if (socket.readyState === WebSocket.OPEN) {
+          onOpen();
+      } else {
+          socket.addEventListener('open', onOpen, { once: true });
+      }
+      socket.addEventListener('message', onMessage);
+    });
+  }, [handleGlobalMessage]);
+  
+  const connect = useCallback(async (token: string) => {
+    try {
+        await connectAndAuthorize(token, true);
+    } catch(e) {
+        disconnect();
+        throw e;
+    }
+  }, [connectAndAuthorize, disconnect]);
+
+  const switchAccount = useCallback(async (loginid: string) => {
+    const targetAccount = accountsRef.current.get(loginid);
+    if (!targetAccount || !targetAccount.token) {
+        toast({
+            variant: "destructive",
+            title: "Switch Failed",
+            description: "Token for the selected account is not available.",
+        });
+        return;
+    }
+    try {
+        await connectAndAuthorize(targetAccount.token);
+        toast({
+            title: "Account Switched",
+            description: `You are now using your ${targetAccount.is_virtual ? 'Demo' : 'Real'} account.`,
+        });
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Switch Failed",
+            description: error.message || "Could not switch to the selected account.",
+        });
+    }
+  }, [connectAndAuthorize, toast]);
+
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const accountTokens = [];
-    for (const [key, value] of urlParams.entries()) {
-        if (key.startsWith('token')) {
-            accountTokens.push(value);
+    const tokensFromUrl: { loginid: string, token: string }[] = [];
+    urlParams.forEach((value, key) => {
+        if (key.startsWith('acct')) {
+            const index = key.substring(4);
+            const loginid = value;
+            const token = urlParams.get(`token${index}`);
+            if (loginid && token) {
+                tokensFromUrl.push({ loginid, token });
+            }
         }
-    }
-    const urlToken = accountTokens.length > 0 ? accountTokens[0] : null;
+    });
 
-    if (urlToken) {
-      connect(urlToken)
+    if (tokensFromUrl.length > 0) {
+      tokensFromUrl.forEach(({ loginid, token }) => {
+        accountsRef.current.set(loginid, { loginid, token } as Account);
+      });
+      const primaryToken = tokensFromUrl[0].token;
+      
+      connect(primaryToken)
         .then(() => {
           toast({
             title: "Login Successful",
@@ -172,19 +266,18 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
           });
         });
     } else {
-      // Handle stored token if no token in URL
-      const storedToken = localStorage.getItem('deriv_token');
-      if (storedToken) {
-        try {
-          const decodedToken = decode(storedToken);
-          connect(decodedToken).catch(() => {
-            // If connection fails with stored token, remove it.
-            localStorage.removeItem('deriv_token');
-          });
-        } catch (error) {
-          // If decoding fails, remove the invalid token.
-          localStorage.removeItem('deriv_token');
-        }
+      const storedSession = localStorage.getItem('deriv_session');
+      if (storedSession) {
+          const sessionData = decode(storedSession) as { activeLoginid: string, accounts: Account[] };
+          if (sessionData && sessionData.activeLoginid && sessionData.accounts) {
+              sessionData.accounts.forEach(acc => accountsRef.current.set(acc.loginid, acc));
+              const activeAcc = accountsRef.current.get(sessionData.activeLoginid);
+              if (activeAcc?.token) {
+                connectAndAuthorize(activeAcc.token, true).catch(() => {
+                    disconnect();
+                });
+              }
+          }
       }
     }
 
@@ -199,11 +292,11 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   return (
     <DerivApiContext.Provider value={{
       isConnected,
-      token,
-      balance,
-      accountType,
+      activeAccount,
+      accountList,
       connect,
       disconnect,
+      switchAccount,
       api: ws.current,
       subscribeToMessages,
       marketConfig
