@@ -54,7 +54,7 @@ function BotBuilderContent() {
                   </TabsList>
               </ScrollArea>
               
-              <TabsContent value="bot-builder" className="px-4 md:px-0">
+              <TabsContent value="bot-builder" className="px-4 md:px-8">
                   <Tabs value={activeBuilderTab} className="w-full" onValueChange={setActiveBuilderTab}>
                       <TabsList className="grid w-full grid-cols-2 mb-6">
                           <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
@@ -86,7 +86,7 @@ function BotBuilderContent() {
                   </Tabs>
               </TabsContent>
 
-              <TabsContent value="dcircle" className="px-4 md:px-0">
+              <TabsContent value="dcircle" className="px-4 md:px-8">
                 <ScrollArea className="h-[calc(100vh-200px)] md:h-[calc(100vh-250px)]">
                   <div className="space-y-8 pr-4">
                       <QuickTradePanel />
@@ -95,7 +95,7 @@ function BotBuilderContent() {
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="trading-view" className="px-4 md:px-0">
+              <TabsContent value="trading-view" className="px-4 md:px-8">
                   <div className="space-y-8">
                       <QuickTradePanel />
                       <div className="w-full rounded-md overflow-hidden border h-[70vh]">
