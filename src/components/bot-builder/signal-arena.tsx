@@ -175,7 +175,6 @@ const SignalArena = () => {
     const symbolsToUnsubscribe = new Set([...currentSubscriptions].filter(s => !visibleSymbols.includes(s)));
 
     symbolsToSubscribe.forEach(symbol => {
-      api.send(JSON.stringify({ ticks_history: symbol, end: "latest", count: 500, style: 'ticks' }));
       api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
       subscribedSymbols.current.add(symbol);
     });
@@ -195,23 +194,24 @@ const SignalArena = () => {
 
 
   const handleMessage = useCallback((data: any) => {
-    if (data.error || (!data.tick && !data.history)) return;
+    if (data.error || !data.tick) return;
 
-    let symbol: string | undefined;
-    if (data.tick) symbol = data.tick.symbol;
-    if (data.history) symbol = data.echo_req.ticks_history;
+    let symbol: string | undefined = data.tick?.symbol;
     if (!symbol || !visibleSymbols.includes(symbol)) return;
 
     setTickCount(prev => prev + 1);
 
-    if (data.history && data.history.prices) {
-        const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p)));
-        setTickData(prev => ({...prev, [symbol!]: newDigits.slice(-500) }));
-    }
-
     if (data.tick) {
         const newDigit = extractLastDigit(parseFloat(data.tick.quote));
-        setTickData(prev => ({...prev, [symbol!]: [...(prev[symbol!] || []), newDigit].slice(-500) }));
+        setTickData(prev => {
+            const currentTicks = prev[symbol!] || [];
+            const updatedTicks = [...currentTicks, newDigit];
+            // Keep the array at a max length of 500
+            if (updatedTicks.length > 500) {
+                updatedTicks.shift();
+            }
+            return { ...prev, [symbol!]: updatedTicks };
+        });
     }
 
     if (data.subscription) {
@@ -361,6 +361,46 @@ const SignalArena = () => {
             </div>
         );
     }
+    
+  const renderContent = () => {
+    if (!isConnected) {
+      return (
+        <div className="signal-loading">
+          <div className="signal-loading-spinner"></div>
+          <p>Connecting to Deriv API...</p>
+          <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '8px' }}>
+            Please ensure you are connected in the main header.
+          </p>
+        </div>
+      );
+    }
+
+    if (displayedCards.length > 0) {
+      return displayedCards.map(card => renderCard(card));
+    }
+
+    // Check if there's any tick data at all for the visible symbols
+    const hasAnyTickData = visibleSymbols.some(symbol => tickData[symbol] && tickData[symbol].length > 0);
+
+    if (hasAnyTickData) {
+      return (
+        <div className="signal-loading">
+          <div className="signal-loading-spinner"></div>
+          <p>Collecting initial ticks for analysis...</p>
+          <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '8px' }}>
+            Need 100 ticks per market to start analysis.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="signal-loading">
+        <div className="signal-loading-spinner"></div>
+        <p>Subscribing to '{activeFilter}' markets...</p>
+      </div>
+    );
+  };
 
   return (
         <div className="signal-center-body">
@@ -393,22 +433,7 @@ const SignalArena = () => {
                 </div>
 
                 <div className="signal-cards-grid">
-                    {!isConnected ? (
-                         <div className="signal-loading">
-                            <div className="signal-loading-spinner"></div>
-                            <p>Connecting to Deriv API...</p>
-                            <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '8px' }}>
-                                Please ensure you are connected in the main header.
-                            </p>
-                        </div>
-                    ) : displayedCards.length > 0 ? (
-                        displayedCards.map(card => renderCard(card))
-                    ) : (
-                        <div className="signal-loading">
-                            <div className="signal-loading-spinner"></div>
-                            <p>Collecting initial ticks for '{activeFilter}' filter...</p>
-                        </div>
-                    )}
+                    {renderContent()}
                 </div>
             </div>
         </div>
@@ -416,3 +441,5 @@ const SignalArena = () => {
 };
 
 export default SignalArena;
+
+    
