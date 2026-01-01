@@ -175,7 +175,13 @@ const SignalArena = () => {
     const symbolsToUnsubscribe = new Set([...currentSubscriptions].filter(s => !visibleSymbols.includes(s)));
 
     symbolsToSubscribe.forEach(symbol => {
-      api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+      api.send(JSON.stringify({
+        ticks_history: symbol,
+        end: "latest",
+        count: 500,
+        style: "ticks",
+        subscribe: 1
+      }));
       subscribedSymbols.current.add(symbol);
     });
 
@@ -194,19 +200,23 @@ const SignalArena = () => {
 
 
   const handleMessage = useCallback((data: any) => {
-    if (data.error || !data.tick) return;
-
-    let symbol: string | undefined = data.tick?.symbol;
-    if (!symbol || !visibleSymbols.includes(symbol)) return;
+    if (data.error || (!data.tick && !data.history)) return;
+    
+    let symbol: string | undefined = data.tick?.symbol || data.history?.symbol;
+    if (!symbol || !subscribedSymbols.current.has(symbol)) return;
 
     setTickCount(prev => prev + 1);
 
-    if (data.tick) {
+    if (data.history) { // Historical data
+      const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p)));
+      setTickData(prev => ({...prev, [symbol!]: newDigits}));
+    }
+
+    if (data.tick) { // Live tick data
         const newDigit = extractLastDigit(parseFloat(data.tick.quote));
         setTickData(prev => {
             const currentTicks = prev[symbol!] || [];
             const updatedTicks = [...currentTicks, newDigit];
-            // Keep the array at a max length of 500
             if (updatedTicks.length > 500) {
                 updatedTicks.shift();
             }
@@ -217,7 +227,7 @@ const SignalArena = () => {
     if (data.subscription) {
         subscriptionIds.current[symbol] = data.subscription.id;
     }
-}, [extractLastDigit, visibleSymbols]);
+}, [extractLastDigit]);
 
 
   useEffect(() => {
@@ -441,5 +451,7 @@ const SignalArena = () => {
 };
 
 export default SignalArena;
+
+    
 
     
