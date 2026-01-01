@@ -36,6 +36,35 @@ const LocoSignals: React.FC = () => {
             Notification.requestPermission();
         }
 
+        const connectWebSocket = () => {
+            ws.current = new WebSocket("ws://localhost:8765");
+
+            ws.current.onopen = () => {
+                setStatus({ text: '🔴 LIVE - Connected', className: 'connected' });
+            };
+
+            ws.current.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.data) {
+                        setSignals(msg.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to parse WebSocket message:", error);
+                }
+            };
+
+            ws.current.onclose = () => {
+                setStatus({ text: 'Disconnected. Reconnecting...', className: 'disconnected' });
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.current.onerror = () => {
+                setStatus({ text: 'Connection Error', className: 'disconnected' });
+                ws.current?.close();
+            };
+        };
+
         connectWebSocket();
 
         return () => {
@@ -44,35 +73,6 @@ const LocoSignals: React.FC = () => {
             }
         };
     }, []);
-
-    const connectWebSocket = () => {
-        ws.current = new WebSocket("ws://localhost:8765");
-
-        ws.current.onopen = () => {
-            setStatus({ text: '🔴 LIVE - Connected', className: 'connected' });
-        };
-
-        ws.current.onmessage = (event) => {
-            try {
-                const msg = JSON.parse(event.data);
-                if (msg.data) {
-                    setSignals(msg.data);
-                }
-            } catch (error) {
-                console.error("Failed to parse WebSocket message:", error);
-            }
-        };
-
-        ws.current.onclose = () => {
-            setStatus({ text: 'Disconnected. Reconnecting...', className: 'disconnected' });
-            setTimeout(connectWebSocket, 3000);
-        };
-
-        ws.current.onerror = () => {
-            setStatus({ text: 'Connection Error', className: 'disconnected' });
-            ws.current?.close();
-        };
-    };
 
     const handleSoundToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
         const checked = event.target.checked;
@@ -100,10 +100,10 @@ const LocoSignals: React.FC = () => {
     };
     
     const signalClass = (value: number, base: number = 60): string => {
-        if (base === 60) {
+        if (base === 60) { // For Over/Under
             return value >= 66 ? "strong" : value >= 61 ? "moderate" : "weak";
         }
-        // For even/odd
+        // For Even/Odd
         const diff = Math.abs(value - 50);
         return diff >= 6 ? "strong" : diff >= 3 ? "moderate" : "weak";
     };
