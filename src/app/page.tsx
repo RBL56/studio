@@ -2,7 +2,7 @@
 
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Bot, Signal, Trophy, CandlestickChart, Circle, Waypoints } from 'lucide-react';
+import { ShieldAlert, Bot, Signal, Trophy, CandlestickChart, Circle, Waypoints, Target } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotProvider, useBot } from '@/context/bot-context';
@@ -14,6 +14,7 @@ import QuickTradePanel from '@/components/bot-builder/quick-trade-panel';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
 import { cn } from '@/lib/utils';
 import { useRef, useEffect } from 'react';
+import SignalArena from '@/components/bot-builder/signal-arena';
 
 function BotBuilderContent() {
   const { isConnected } = useDerivApi();
@@ -46,6 +47,7 @@ function BotBuilderContent() {
               <TabsList className="flex-col h-auto hidden md:flex">
                   <TabsTrigger value="bot-builder" className="py-3 text-base w-full justify-start"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                   <TabsTrigger value="dcircle" className="py-3 text-base w-full justify-start"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+                  <TabsTrigger value="signal-arena" className="py-3 text-base w-full justify-start"><Target className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
                   <TabsTrigger value="trading-view" className="py-3 text-base w-full justify-start"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
               </TabsList>
               
@@ -54,6 +56,7 @@ function BotBuilderContent() {
                     <TabsList className="inline-flex w-full mb-6">
                         <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                         <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+                        <TabsTrigger value="signal-arena" className="py-3 text-base w-full justify-start"><Target className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
                         <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
                     </TabsList>
                 </ScrollArea>
@@ -99,6 +102,10 @@ function BotBuilderContent() {
                         <DigitAnalysisTool />
                     </div>
                   </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="signal-arena" className="mt-0 px-4 md:px-0">
+                  <SignalArena />
                 </TabsContent>
 
                 <TabsContent value="trading-view" className="mt-0 px-4 md:px-0">
