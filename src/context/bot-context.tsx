@@ -24,6 +24,11 @@ interface BotContextType {
   resetStats: () => void;
   form: UseFormReturn<BotConfigurationValues> | null;
   setForm: (form: UseFormReturn<BotConfigurationValues>) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  activeBuilderTab: string;
+  setActiveBuilderTab: (tab: string) => void;
+  tradeLogRef: React.RefObject<HTMLDivElement>;
 }
 
 const BotContext = createContext<BotContextType | undefined>(undefined);
@@ -40,6 +45,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const [totalWins, setTotalWins] = useState(0);
   const [totalLosses, setTotalLosses] = useState(0);
   const [form, setForm] = useState<UseFormReturn<BotConfigurationValues> | null>(null);
+  const [activeTab, setActiveTab] = useState('bot-builder');
+  const [activeBuilderTab, setActiveBuilderTab] = useState('speedbot');
 
   const configRef = useRef<BotConfigurationValues | null>(null);
   const currentStakeRef = useRef<number>(0);
@@ -47,6 +54,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const totalProfitRef = useRef(0);
   const bulkTradesCompletedRef = useRef(0);
   const openContractsRef = useRef(new Map<string, number>());
+  const tradeLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     totalProfitRef.current = totalProfit;
@@ -289,6 +297,13 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     
     isRunningRef.current = true;
     setBotStatus('running');
+
+    setActiveTab('bot-builder');
+    setActiveBuilderTab('speedbot');
+
+    setTimeout(() => {
+      tradeLogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
     
     if (config.useBulkTrading) {
       const tradeCount = config.bulkTradeCount || 1;
@@ -317,7 +332,12 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       stopBot,
       resetStats,
       form,
-      setForm
+      setForm,
+      activeTab,
+      setActiveTab,
+      activeBuilderTab,
+      setActiveBuilderTab,
+      tradeLogRef,
     }}>
       {children}
     </BotContext.Provider>
@@ -331,6 +351,3 @@ export const useBot = () => {
   }
   return context;
 };
-
-    
-    
