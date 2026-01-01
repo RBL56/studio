@@ -77,6 +77,7 @@ export default function BotConfigurationForm() {
   const useMartingale = currentForm.watch('useMartingale');
   const useBulkTrading = currentForm.watch('useBulkTrading');
   const useEntryPoint = currentForm.watch('useEntryPoint');
+  const entryPointType = currentForm.watch('entryPointType');
 
   return (
     <Card>
@@ -385,34 +386,50 @@ export default function BotConfigurationForm() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                {entryPointType === 'single' ? (
+                  <FormField
+                    control={currentForm.control}
+                    name="entryRangeStart"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Entry Digit</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
-                        control={currentForm.control}
-                        name="entryRangeStart"
-                        render={({ field }) => (
+                      control={currentForm.control}
+                      name="entryRangeStart"
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>From Range</FormLabel>
-                            <FormControl>
+                          <FormLabel>From Range</FormLabel>
+                          <FormControl>
                             <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
-                            </FormControl>
-                            <FormMessage />
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
-                        )}
+                      )}
                     />
                     <FormField
-                        control={currentForm.control}
-                        name="entryRangeEnd"
-                        render={({ field }) => (
+                      control={currentForm.control}
+                      name="entryRangeEnd"
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>To Range</FormLabel>
-                            <FormControl>
+                          <FormLabel>To Range</FormLabel>
+                          <FormControl>
                             <Input type="number" placeholder="9" {...field} value={field.value ?? ''} disabled={isBotRunning}/>
-                            </FormControl>
-                            <FormMessage />
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
-                        )}
+                      )}
                     />
-                </div>
+                  </div>
+                )}
               </div>
             )}
 

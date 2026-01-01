@@ -55,7 +55,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const isRunningRef = useRef(false);
   const totalProfitRef = useRef(0);
   const bulkTradesCompletedRef = useRef(0);
-  const openContractsRef = useRef(new Map<number, number>());
+  const openContractsRef = useRef(new Map<number, {stake: number}>());
   const tradeLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -181,7 +181,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     
     if (data.msg_type === 'buy') {
         if(data.buy.contract_id){
-            openContractsRef.current.set(data.buy.contract_id, data.buy.buy_price);
+            openContractsRef.current.set(data.buy.contract_id, { stake: data.buy.buy_price });
             const newTrade: Trade = {
                 id: data.buy.contract_id,
                 description: data.buy.longcode,
@@ -200,10 +200,10 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const contract = data.proposal_open_contract;
         const contractId = contract.contract_id;
 
-        if (!openContractsRef.current.has(contractId)) return;
+        const contractInfo = openContractsRef.current.get(contractId);
+        if (!contractInfo) return;
         if (!contract.is_sold) return;
 
-        const stake = openContractsRef.current.get(contractId) || 0;
         openContractsRef.current.delete(contractId);
         
         const config = configRef.current;
@@ -217,7 +217,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         } else {
             setTotalLosses(prev => prev + 1);
             if (config?.useMartingale && config.martingaleFactor) {
-                currentStakeRef.current = stake * config.martingaleFactor;
+                currentStakeRef.current = contractInfo.stake * config.martingaleFactor;
             } else if (config) {
                 currentStakeRef.current = config.initialStake;
             }
@@ -337,19 +337,20 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     if (botStatus !== 'waiting' || !configRef.current?.useEntryPoint) return;
 
     const config = configRef.current;
-    const start = config.entryRangeStart ?? 0;
-    const end = config.entryRangeEnd ?? 9;
-
+    
     if (config.entryPointType === 'single') {
-      const lastDigit = lastDigits[lastDigits.length - 1];
-      if (lastDigit >= start && lastDigit <= end) {
-        purchaseContract();
-      }
+        const entryDigit = config.entryRangeStart ?? 0;
+        const lastDigit = lastDigits[lastDigits.length - 1];
+        if (lastDigit === entryDigit) {
+            purchaseContract();
+        }
     } else if (config.entryPointType === 'consecutive' && lastDigits.length >= 2) {
-      const lastTwo = lastDigits.slice(-2);
-      if (lastTwo[0] >= start && lastTwo[0] <= end && lastTwo[1] >= start && lastTwo[1] <= end) {
-        purchaseContract();
-      }
+        const start = config.entryRangeStart ?? 0;
+        const end = config.entryRangeEnd ?? 9;
+        const lastTwo = lastDigits.slice(-2);
+        if (lastTwo[0] >= start && lastTwo[0] <= end && lastTwo[1] >= start && lastTwo[1] <= end) {
+            purchaseContract();
+        }
     }
   }, [lastDigits, botStatus, purchaseContract]);
 
