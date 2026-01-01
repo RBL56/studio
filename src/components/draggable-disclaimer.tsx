@@ -20,7 +20,6 @@ const DraggableDisclaimer = () => {
   }, [isInitialPositionSet, isOpen]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only allow dragging from the header part
     if (nodeRef.current && (e.target as HTMLElement).closest('.disclaimer-header')) {
         setIsDragging(true);
         dragStartRef.current = {
@@ -46,8 +45,7 @@ const DraggableDisclaimer = () => {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isDragging) return;
     const target = e.target as HTMLElement;
-    // Toggle open/close only when clicking the header, not the content or close button
-    if (target.closest('.disclaimer-header') && !target.closest('button')) {
+    if (target.closest('.disclaimer-header') && !target.closest('button.close-btn')) {
         setIsOpen(!isOpen);
     }
   };
@@ -80,10 +78,10 @@ const DraggableDisclaimer = () => {
       onClick={handleClick}
     >
         <div className="disclaimer-header">
-            <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+            <ShieldAlert className="h-5 w-5 text-destructive-foreground" />
             <strong className="disclaimer-title">Disclaimer</strong>
             <button onClick={() => setIsOpen(!isOpen)} className="close-btn">
-                {isOpen ? <X className="h-4 w-4"/> : null}
+                {isOpen && <X className="h-4 w-4"/>}
             </button>
         </div>
       {isOpen && (

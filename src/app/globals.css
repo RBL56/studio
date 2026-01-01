@@ -86,7 +86,7 @@
 /* Draggable Disclaimer */
 .draggable-disclaimer {
     @apply fixed z-50 rounded-lg shadow-lg;
-    @apply bg-background/80 backdrop-blur-sm border border-border;
+    @apply bg-destructive/80 backdrop-blur-sm border border-destructive/50;
     transition: width 0.3s ease, height 0.3s ease;
 }
 .draggable-disclaimer.is-open {
@@ -101,15 +101,15 @@
 }
 
 .disclaimer-title {
-    @apply font-semibold text-foreground;
+    @apply font-semibold text-destructive-foreground;
 }
 
 .draggable-disclaimer p {
-    @apply text-xs text-muted-foreground mt-2;
+    @apply text-xs text-destructive-foreground mt-2;
 }
 
 .close-btn {
-    @apply ml-auto p-1 rounded-full hover:bg-muted/50;
+    @apply ml-auto p-1 rounded-full text-destructive-foreground hover:bg-destructive/50;
 }
 
 
