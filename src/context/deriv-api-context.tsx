@@ -66,6 +66,11 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
   const messageHandlers = useRef<Set<(data: any) => void>>(new Set());
   const { toast } = useToast();
   const accountsRef = useRef<Map<string, Account>>(new Map());
+  const activeAccountRef = useRef<Account | null>(null);
+
+  useEffect(() => {
+    activeAccountRef.current = activeAccount;
+  }, [activeAccount]);
 
   const handleGlobalMessage = (data: any) => {
     if (data.error) {
@@ -84,7 +89,7 @@ export const DerivApiProvider = ({ children }: { children: ReactNode }) => {
         const loginid = balanceData.loginid;
         const updatedBalance = balanceData.balance;
 
-        if (loginid === activeAccount?.loginid && updatedBalance !== undefined) {
+        if (loginid === activeAccountRef.current?.loginid && updatedBalance !== undefined) {
           setActiveAccount(prev => prev ? { ...prev, balance: updatedBalance } : null);
         }
     }
