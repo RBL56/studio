@@ -44,73 +44,84 @@ function BotBuilderContent() {
   return (
     <div className={cn("py-4 md:py-8")}>
         {isConnected ? (
-          <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
-              <ScrollArea className="w-full whitespace-nowrap pb-4 px-4 md:px-0">
-                  <TabsList className="inline-grid w-full grid-cols-4 mb-6 min-w-[700px]">
-                      <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
-                      <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
-                      <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
-                      <TabsTrigger value="signal-arena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
-                  </TabsList>
-              </ScrollArea>
+          <Tabs value={activeTab} className="w-full md:grid md:grid-cols-[250px_1fr] gap-8" onValueChange={handleTabChange}>
+              <TabsList className="flex-col h-auto hidden md:flex">
+                  <TabsTrigger value="bot-builder" className="py-3 text-base w-full justify-start"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
+                  <TabsTrigger value="dcircle" className="py-3 text-base w-full justify-start"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+                  <TabsTrigger value="trading-view" className="py-3 text-base w-full justify-start"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
+                  <TabsTrigger value="signal-arena" className="py-3 text-base w-full justify-start"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+              </TabsList>
               
-              <TabsContent value="bot-builder" className="px-4 md:px-8">
-                  <Tabs value={activeBuilderTab} className="w-full" onValueChange={setActiveBuilderTab}>
-                      <TabsList className="grid w-full grid-cols-2 mb-6">
-                          <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
-                          <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="speedbot">
-                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                              <div className="lg:col-span-1">
-                                  <BotConfigurationForm />
-                              </div>
-                              <div className="lg:col-span-2 space-y-8">
-                                  <BotStatus />
-                                  <div ref={tradeLogRef}>
-                                    <TradeLog />
-                                  </div>
-                              </div>
-                          </div>
-                      </TabsContent>
-                      <TabsContent value="signalbot">
-                          <Card>
-                              <CardHeader>
-                                  <CardTitle>Under Development</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                  <p>This feature is currently under development and will be available soon.</p>
-                              </CardContent>
-                          </Card>
-                      </TabsContent>
-                  </Tabs>
-              </TabsContent>
-
-              <TabsContent value="dcircle" className="px-4 md:px-8">
-                <ScrollArea className="h-[calc(100vh-200px)] md:h-[calc(100vh-250px)]">
-                  <div className="space-y-8 pr-4">
-                      <QuickTradePanel />
-                      <DigitAnalysisTool />
-                  </div>
+              <div className="md:hidden px-4">
+                 <ScrollArea className="w-full whitespace-nowrap pb-4">
+                    <TabsList className="inline-grid w-full grid-cols-4 mb-6 min-w-[700px]">
+                        <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
+                        <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+                        <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
+                        <TabsTrigger value="signal-arena" className="py-3 text-base"><Trophy className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+                    </TabsList>
                 </ScrollArea>
-              </TabsContent>
+              </div>
 
-              <TabsContent value="trading-view" className="px-4 md:px-8">
-                  <div className="space-y-8">
-                      <QuickTradePanel />
-                      <div className="w-full rounded-md overflow-hidden border h-[70vh]">
-                          <iframe
-                              src="https://charts.deriv.com"
-                              className="w-full h-full"
-                              title="Deriv TradingView Chart"
-                          />
-                      </div>
-                  </div>
-              </TabsContent>
-              
-              <TabsContent value="signal-arena">
-                <LocoSignals />
-              </TabsContent>
+              <div>
+                <TabsContent value="bot-builder" className="mt-0 px-4 md:px-0">
+                    <Tabs value={activeBuilderTab} className="w-full" onValueChange={setActiveBuilderTab}>
+                        <TabsList className="grid w-full grid-cols-2 mb-6">
+                            <TabsTrigger value="speedbot" className="py-3 text-base"><Bot className="mr-2 h-5 w-5" />SpeedBot</TabsTrigger>
+                            <TabsTrigger value="signalbot" className="py-3 text-base"><Signal className="mr-2 h-5 w-5" />Signal Bot</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="speedbot">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <div className="lg:col-span-1">
+                                    <BotConfigurationForm />
+                                </div>
+                                <div className="lg:col-span-2 space-y-8">
+                                    <BotStatus />
+                                    <div ref={tradeLogRef}>
+                                      <TradeLog />
+                                    </div>
+                                </div>
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="signalbot">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Under Development</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p>This feature is currently under development and will be available soon.</p>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
+                </TabsContent>
+
+                <TabsContent value="dcircle" className="mt-0 px-4 md:px-0">
+                  <ScrollArea className="h-[calc(100vh-160px)] md:h-[calc(100vh-200px)]">
+                    <div className="space-y-8 pr-4">
+                        <QuickTradePanel />
+                        <DigitAnalysisTool />
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="trading-view" className="mt-0 px-4 md:px-0">
+                    <div className="space-y-8">
+                        <QuickTradePanel />
+                        <div className="w-full rounded-md overflow-hidden border h-[70vh]">
+                            <iframe
+                                src="https://charts.deriv.com"
+                                className="w-full h-full"
+                                title="Deriv TradingView Chart"
+                            />
+                        </div>
+                    </div>
+                </TabsContent>
+                
+                <TabsContent value="signal-arena" className="mt-0">
+                  <LocoSignals />
+                </TabsContent>
+              </div>
           </Tabs>
         ) : (
           <Card className="h-full flex flex-col justify-center items-center text-center py-16 mx-4 md:mx-0">
