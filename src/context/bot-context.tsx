@@ -211,6 +211,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const config = configRef.current;
         const isWin = contract.status === 'won';
         
+        const currentStake = contractInfo.stake;
+
         if (isWin) {
             setTotalWins(prev => prev + 1);
             consecutiveLossesRef.current = 0;
@@ -221,7 +223,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             setTotalLosses(prev => prev + 1);
             consecutiveLossesRef.current += 1;
             if (config?.useMartingale && config.martingaleFactor) {
-                currentStakeRef.current = contractInfo.stake * config.martingaleFactor;
+                currentStakeRef.current = currentStake * config.martingaleFactor;
             } else if (config) {
                 currentStakeRef.current = config.initialStake;
             }
@@ -345,25 +347,37 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   }, [api, isConnected, purchaseContract, toast, connectDigit, digitStatus]);
 
   useEffect(() => {
-    if (botStatus !== 'waiting' || !configRef.current?.useEntryPoint) return;
-
+    if (botStatus !== 'waiting' || !isRunningRef.current || !configRef.current?.useEntryPoint) return;
+  
     const config = configRef.current;
-    
+  
     if (config.entryPointType === 'single') {
-        const entryDigit = config.entryRangeStart ?? 0;
-        const lastDigit = lastDigits[lastDigits.length - 1];
-        if (lastDigit === entryDigit) {
-            purchaseContract();
+      const entryDigit = config.entryRangeStart ?? 0;
+      const lastDigit = lastDigits[lastDigits.length - 1];
+      if (lastDigit === entryDigit) {
+        purchaseContract();
+        // Stop waiting after purchase
+        if(isRunningRef.current) setBotStatus('running');
+        // Since we are no longer waiting for an entry point, we can stop the digit analysis subscription
+        if (digitStatus !== 'disconnected') {
+            disconnectDigit(true);
         }
+      }
     } else if (config.entryPointType === 'consecutive' && lastDigits.length >= 2) {
-        const start = config.entryRangeStart ?? 0;
-        const end = config.entryRangeEnd ?? 9;
-        const lastTwo = lastDigits.slice(-2);
-        if (lastTwo[0] >= start && lastTwo[0] <= end && lastTwo[1] >= start && lastTwo[1] <= end) {
-            purchaseContract();
+      const start = config.entryRangeStart ?? 0;
+      const end = config.entryRangeEnd ?? 9;
+      const lastTwo = lastDigits.slice(-2);
+      if (lastTwo[0] >= start && lastTwo[0] <= end && lastTwo[1] >= start && lastTwo[1] <= end) {
+        purchaseContract();
+        // Stop waiting after purchase
+        if(isRunningRef.current) setBotStatus('running');
+        // Since we are no longer waiting for an entry point, we can stop the digit analysis subscription
+        if (digitStatus !== 'disconnected') {
+            disconnectDigit(true);
         }
+      }
     }
-  }, [lastDigits, botStatus, purchaseContract]);
+  }, [lastDigits, botStatus, purchaseContract, digitStatus, disconnectDigit]);
 
   const isBotRunning = (botStatus === 'running' || botStatus === 'waiting') && isRunningRef.current;
 
@@ -400,3 +414,5 @@ export const useBot = () => {
   }
   return context;
 };
+
+    
