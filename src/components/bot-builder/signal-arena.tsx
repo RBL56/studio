@@ -17,7 +17,6 @@ const chiSquareTest = (observed: number[]) => {
     const chi2 = observed.reduce((acc, obs) => acc + Math.pow(obs - expected, 2) / expected, 0);
     
     // Simplified p-value estimation for 9 degrees of freedom
-    // Critical values for Chi-Square distribution with 9 DF
     const p_value_table: { [key: number]: number } = {
         21.67: 0.01, 19.02: 0.025, 16.92: 0.05, 14.68: 0.1, 12.24: 0.2, 4.17: 0.9, 2.7: 0.98
     };
@@ -55,7 +54,7 @@ const analyzeDigits = (digits: number[], symbol: string, name: string) => {
     }
     percentages.over_3 = (counts.slice(4).reduce((a, b) => a + b, 0) / total) * 100;
     percentages.under_6 = (counts.slice(0, 6).reduce((a, b) => a + b, 0) / total) * 100;
-    const evenCount = counts[0] + counts[2] + counts[4] + counts[6] + counts[8];
+    const evenCount = counts.reduce((acc, count, i) => i % 2 === 0 ? acc + count : acc, 0);
     percentages.even = (evenCount / total) * 100;
     percentages.odd = 100 - percentages.even;
 
@@ -153,32 +152,18 @@ const SignalArena = () => {
     useEffect(() => {
         if (!api || !isConnected) return;
     
-        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS];
-        const symbolsToBatch = symbolsToSubscribe.filter(s => !subscribedSymbols.current.has(s));
-    
-        const batchSize = 5;
-        const delay = 200; // ms between batches
-    
-        const subscribeBatch = async (batchIndex: number) => {
-            const batch = symbolsToBatch.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
-            if (batch.length === 0) return;
-    
-            batch.forEach(symbol => {
+        const subscribeToAllMarkets = () => {
+            Object.keys(SYMBOL_CONFIG).forEach(symbol => {
                 if (api && !subscribedSymbols.current.has(symbol)) {
-                    api.send(JSON.stringify({ ticks_history: symbol, end: "latest", count: 500, subscribe: 1 }));
+                    api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
                     subscribedSymbols.current.add(symbol);
                 }
             });
-    
-            // Schedule the next batch
-            if ((batchIndex + 1) * batchSize < symbolsToBatch.length) {
-                setTimeout(() => subscribeBatch(batchIndex + 1), delay);
-            }
         };
     
-        subscribeBatch(0);
+        subscribeToAllMarkets();
     
-    }, [api, isConnected, activeFilter, FILTERS]);
+    }, [api, isConnected]);
 
     const handleMessage = useCallback((data: any) => {
         if (data.error) {
@@ -188,30 +173,21 @@ const SignalArena = () => {
             return;
         }
 
-        const processNewTick = (tick: any) => {
+        if (data.msg_type === 'tick') {
+            const tick = data.tick;
             const symbol = tick.symbol;
             if (subscribedSymbols.current.has(symbol)) {
                 setTickCount(prev => prev + 1);
                 const newDigit = extractLastDigit(parseFloat(tick.quote), symbol);
                 setTickData(prev => {
-                    const updatedTicks = [...(prev[symbol] || [])];
-                    if(updatedTicks.length >= 500) {
+                    const existingTicks = prev[symbol] || [];
+                    const updatedTicks = [...existingTicks, newDigit];
+                    if (updatedTicks.length > 500) {
                         updatedTicks.shift();
                     }
-                    updatedTicks.push(newDigit);
                     return { ...prev, [symbol]: updatedTicks };
                 });
             }
-        };
-
-        if (data.msg_type === 'history') {
-            const symbol = data.echo_req.ticks_history;
-            const history = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
-            setTickData(prev => ({...prev, [symbol]: history }));
-        }
-
-        if (data.msg_type === 'tick') {
-            processNewTick(data.tick);
         }
     }, [extractLastDigit]);
 
@@ -300,26 +276,26 @@ const SignalArena = () => {
         }
 
         const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS];
-        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol) && (tickData[card.symbol]?.length || 0) >= 100);
-        const loadingCards = symbolsInFilter.filter(symbol => (tickData[symbol]?.length || 0) < 100 && subscribedSymbols.current.has(symbol));
+        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol));
+        const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
+            !analysisData[symbol] || (tickData[symbol]?.length || 0) < 100
+        );
 
-        if (visibleCards.length === 0 && loadingCards.length === 0 && !Array.from(subscribedSymbols.current).some(s => symbolsInFilter.includes(s))) {
-             return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Subscribing to '{activeFilter}' markets...</p></div>;
-        }
-        
-        if (visibleCards.length === 0 && loadingCards.length === 0) {
+        if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === 0) {
             return <div className="signal-no-data"><p>No signals match the current filter.</p></div>
         }
-
+        
         return (
             <>
                 {visibleCards.map(card => renderCard(card))}
-                {loadingCards.map(symbol => (
+                {loadingOrNoDataSymbols
+                    .filter(symbol => !visibleCards.some(card => card.symbol === symbol))
+                    .map(symbol => (
                     <div key={symbol} className="signal-card">
                         <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol].name}</h3><div className="symbol">{symbol}</div></div></div>
                         <div className="signal-loading" style={{padding: '20px 0'}}>
                             <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
-                            <p style={{fontSize: '0.875rem'}}>Collecting historical ticks... ({(tickData[symbol]?.length || 0)}/500)</p>
+                            <p style={{fontSize: '0.875rem'}}>Collecting live ticks... ({(tickData[symbol]?.length || 0)}/100)</p>
                         </div>
                     </div>
                 ))}
@@ -349,5 +325,3 @@ const SignalArena = () => {
 };
 
 export default SignalArena;
-
-    
