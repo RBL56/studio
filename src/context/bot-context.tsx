@@ -57,6 +57,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const bulkTradesCompletedRef = useRef(0);
   const openContractsRef = useRef(new Map<number, {stake: number}>());
   const tradeLogRef = useRef<HTMLDivElement>(null);
+  const consecutiveLossesRef = useRef(0);
 
   useEffect(() => {
     totalProfitRef.current = totalProfit;
@@ -96,6 +97,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     setTotalLosses(0);
     bulkTradesCompletedRef.current = 0;
     openContractsRef.current.clear();
+    consecutiveLossesRef.current = 0;
     toast({
         title: 'Stats Reset',
         description: 'The trade log and statistics have been cleared.',
@@ -211,11 +213,13 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         
         if (isWin) {
             setTotalWins(prev => prev + 1);
+            consecutiveLossesRef.current = 0;
             if(config) {
                 currentStakeRef.current = config.initialStake;
             }
         } else {
             setTotalLosses(prev => prev + 1);
+            consecutiveLossesRef.current += 1;
             if (config?.useMartingale && config.martingaleFactor) {
                 currentStakeRef.current = contractInfo.stake * config.martingaleFactor;
             } else if (config) {
@@ -260,8 +264,14 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
-        if (config?.stopLoss && newTotalProfit <= -config.stopLoss) {
-            toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss limit." });
+        if (config?.stopLossType === 'amount' && config.stopLossAmount && newTotalProfit <= -config.stopLossAmount) {
+            toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss amount limit." });
+            stopBot(false);
+            return;
+        }
+
+        if (config?.stopLossType === 'consecutive_losses' && config.stopLossConsecutive && consecutiveLossesRef.current >= config.stopLossConsecutive) {
+            toast({ title: "Stop-Loss Hit", description: `Bot stopped after ${config.stopLossConsecutive} consecutive losses.` });
             stopBot(false);
             return;
         }
@@ -304,6 +314,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     currentStakeRef.current = config.initialStake;
     bulkTradesCompletedRef.current = 0;
     openContractsRef.current.clear();
+    consecutiveLossesRef.current = 0;
     
     isRunningRef.current = true;
     

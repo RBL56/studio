@@ -23,7 +23,9 @@ const formSchema = z.object({
   initialStake: z.coerce.number().positive('Stake must be positive'),
   ticks: z.coerce.number().int().min(1, 'Ticks must be at least 1').max(10, 'Ticks cannot exceed 10'),
   takeProfit: z.coerce.number().positive('Take profit must be positive').optional(),
-  stopLoss: z.coerce.number().positive('Stop loss must be positive').optional(),
+  stopLossType: z.enum(['amount', 'consecutive_losses']).default('amount'),
+  stopLossAmount: z.coerce.number().positive('Stop loss must be positive').optional(),
+  stopLossConsecutive: z.coerce.number().int().positive('Must be a positive number').optional(),
   useMartingale: z.boolean().default(false),
   martingaleFactor: z.coerce.number().min(1, 'Factor must be at least 1').optional(),
   useBulkTrading: z.boolean().default(false),
@@ -53,7 +55,9 @@ export default function BotConfigurationForm() {
       useBulkTrading: false,
       bulkTradeCount: 10,
       takeProfit: 10,
-      stopLoss: 50,
+      stopLossType: 'amount',
+      stopLossAmount: 50,
+      stopLossConsecutive: 5,
       useEntryPoint: false,
       entryPointType: 'single',
       entryRangeStart: 0,
@@ -78,6 +82,7 @@ export default function BotConfigurationForm() {
   const useBulkTrading = currentForm.watch('useBulkTrading');
   const useEntryPoint = currentForm.watch('useEntryPoint');
   const entryPointType = currentForm.watch('entryPointType');
+  const stopLossType = currentForm.watch('stopLossType');
 
   return (
     <Card>
@@ -248,20 +253,58 @@ export default function BotConfigurationForm() {
                     </FormItem>
                     )}
                 />
-                <FormField
+                 <FormField
                     control={currentForm.control}
-                    name="stopLoss"
+                    name="stopLossType"
                     render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Stop Loss ($)</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="e.g. 5" {...field} value={field.value ?? ''} disabled={isBotRunning} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
+                        <FormItem>
+                            <FormLabel>Stop Loss Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isBotRunning}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select stop loss type" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="amount">Amount ($)</SelectItem>
+                                    <SelectItem value="consecutive_losses">Consecutive Losses</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
                     )}
                 />
             </div>
+
+            {stopLossType === 'amount' ? (
+                <FormField
+                    control={currentForm.control}
+                    name="stopLossAmount"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Stop Loss Amount ($)</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g. 50" {...field} value={field.value ?? ''} disabled={isBotRunning} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            ) : (
+                <FormField
+                    control={currentForm.control}
+                    name="stopLossConsecutive"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Consecutive Losses</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g. 5" {...field} value={field.value ?? ''} disabled={isBotRunning} />
+                            </FormControl>
+                             <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            )}
             
             <FormField
               control={currentForm.control}
