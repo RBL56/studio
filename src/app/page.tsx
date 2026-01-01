@@ -54,7 +54,7 @@ function BotBuilderContent() {
               
               <div className="md:hidden px-4">
                  <ScrollArea className="w-full whitespace-nowrap pb-4">
-                    <TabsList className="inline-grid w-full grid-cols-4 mb-6 min-w-[700px]">
+                    <TabsList className="inline-flex w-full mb-6">
                         <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                         <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
                         <TabsTrigger value="trading-view" className="py-3 text-base"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
