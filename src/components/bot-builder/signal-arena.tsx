@@ -95,8 +95,10 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
     'R_100': { name: 'Volatility 100', type: 'volatility' },
     '1HZ10V': { name: 'Volatility 10 (1s)', type: 'volatility' },
     '1HZ25V': { name: 'Volatility 25 (1s)', type: 'volatility' },
+    '1HZ30V': { name: 'Volatility 30 (1s)', type: 'volatility' },
     '1HZ50V': { name: 'Volatility 50 (1s)', type: 'volatility' },
     '1HZ75V': { name: 'Volatility 75 (1s)', type: 'volatility' },
+    '1HZ90V': { name: 'Volatility 90 (1s)', type: 'volatility' },
     '1HZ100V': { name: 'Volatility 100 (1s)', type: 'volatility' },
     'JD10': { name: 'Jump 10', type: 'jump' },
     'JD25': { name: 'Jump 25', type: 'jump' },
@@ -165,8 +167,11 @@ const SignalArena = () => {
         if (data.msg_type === 'history') {
             const symbol = data.echo_req.ticks_history;
             const digits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
-            setTickData(prev => ({ ...prev, [symbol]: digits.slice(-500) }));
-            if (api) {
+            setTickData(prev => {
+                const updatedTicks = digits.slice(-500);
+                return { ...prev, [symbol]: updatedTicks };
+            });
+            if (api && api.readyState === WebSocket.OPEN) {
                 api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             }
         }
