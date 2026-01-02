@@ -106,7 +106,6 @@ const analyzeDigits = (digits: number[], symbol: string, name: string) => {
         chi_square: chiSquare,
         confidence: Math.min(100, confidence),
         hot_digits: hotDigits,
-        reasons,
         ticks_analyzed: total,
         update_time: new Date().toISOString(),
         strong_signal: percentages.over_3 >= 66 || percentages.under_6 >= 66,
@@ -219,17 +218,13 @@ const SignalArena = () => {
         if (!api || !isConnected) return;
     
         const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS] || Object.keys(SYMBOL_CONFIG);
-        let delay = 0;
     
         symbolsToSubscribe.forEach(symbol => {
             if (!subscribedSymbols.current.has(symbol)) {
-                setTimeout(() => {
-                    if (api && api.readyState === WebSocket.OPEN) {
-                        api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
-                        subscribedSymbols.current.add(symbol);
-                    }
-                }, delay);
-                delay += 350; 
+                if (api && api.readyState === WebSocket.OPEN) {
+                    api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
+                    subscribedSymbols.current.add(symbol);
+                }
             }
         });
     
@@ -394,6 +389,7 @@ export default SignalArena;
     
 
     
+
 
 
 
