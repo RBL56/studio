@@ -217,7 +217,7 @@ const SignalArena = () => {
                 initialStake: 1, 
                 takeProfit: 10,
                 stopLossType: 'consecutive_losses',
-                stopLossConsecutive: 5,
+                stopLossConsecutive: 3,
                 useMartingale: true,
                 martingaleFactor: 2.1
             }
@@ -442,7 +442,7 @@ const SignalArena = () => {
     return (
         <div className="signal-center-body">
             <div className="signal-center-container">
-                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
+                <div className="signal-center-header"><h1><span>🎯</span> LOCO Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
                 <SignalBotConfigPanel />
                 <div className="signal-filters">
                     {Object.keys(FILTERS).map(filter => (

@@ -1,4 +1,4 @@
-# Deriv Trading Bot Builder
+# LOCO TRADING HUB
 
 This is a Next.js application for building and backtesting trading bots for the Deriv platform.
 

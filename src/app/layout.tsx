@@ -10,13 +10,13 @@ import DraggableDisclaimer from '@/components/draggable-disclaimer';
 
 
 export const metadata: Metadata = {
-  title: 'Build a trading bot without coding | Deriv Bot',
+  title: 'Build a trading bot without coding | LOCO TRADING HUB',
   description: 'Import your current bot or learn how to create a trading bot from scratch with our detailed guides, FAQs, and tutorials. Start with a quick strategy!',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Deriv Bot',
+    title: 'LOCO TRADING HUB',
   },
   other: {
     'msapplication-TileColor': '#ff444f',
