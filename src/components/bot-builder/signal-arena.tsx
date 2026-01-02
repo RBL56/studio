@@ -7,6 +7,32 @@ import { useDerivApi } from '@/context/deriv-api-context';
 import { cn } from '@/lib/utils';
 import { Bot } from 'lucide-react';
 
+// --- Sound Utility ---
+const playSound = () => {
+    try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+        oscillator.frequency.exponentialRampToValueAtTime(1046.50, audioContext.currentTime + 0.1); // C6 note
+        oscillator.frequency.exponentialRampToValueAtTime(1318.51, audioContext.currentTime + 0.2); // E6 note
+        
+        oscillator.start(audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.3);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch(e) {
+        console.error("Could not play sound", e);
+    }
+};
+
 // --- Start of Analysis Logic ---
 const chiSquareTest = (observed: number[]) => {
     const total = observed.reduce((a, b) => a + b, 0);
@@ -117,6 +143,8 @@ const SignalArena = () => {
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
     
     const subscribedSymbols = useRef(new Set<string>());
+    const strongSignalNotified = useRef(new Set<string>());
+
 
     const extractLastDigit = useCallback((price: number, marketSymbol: string) => {
         const config = marketConfig[marketSymbol];
@@ -221,6 +249,16 @@ const SignalArena = () => {
                 if (digits && digits.length >= 100) {
                     const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol]?.name || symbol);
                     if (result) {
+                        const previousResult = analysisData[symbol];
+                        if (result.strong_signal && (!previousResult || !previousResult.strong_signal)) {
+                            if (!strongSignalNotified.current.has(symbol)) {
+                                playSound();
+                                strongSignalNotified.current.add(symbol);
+                            }
+                        } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
+                            strongSignalNotified.current.delete(symbol);
+                        }
+
                         updatedAnalysis[symbol] = result;
                         needsUpdate = true;
                     }
@@ -231,7 +269,7 @@ const SignalArena = () => {
              setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
              setUpdateTime(new Date().toLocaleTimeString());
         }
-    }, [tickData]);
+    }, [tickData, analysisData]);
     
     useEffect(() => {
         filterAndSortData();
@@ -356,6 +394,7 @@ export default SignalArena;
     
 
     
+
 
 
 
