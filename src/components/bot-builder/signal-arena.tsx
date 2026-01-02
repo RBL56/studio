@@ -113,7 +113,7 @@ const SignalArena = () => {
     const [tickData, setTickData] = useState<{ [key: string]: number[] }>({});
     const [analysisData, setAnalysisData] = useState<{ [key: string]: any }>({});
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
-    const [activeFilter, setActiveFilter] = useState('all');
+    const [activeFilter, setActiveFilter] = useState('volatility');
     const [tickCount, setTickCount] = useState(0);
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
     
@@ -163,7 +163,9 @@ const SignalArena = () => {
         if (data.msg_type === 'history') {
             const symbol = data.echo_req.ticks_history;
             const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
+            
             setTickData(prev => ({ ...prev, [symbol]: newDigits }));
+
             if (api && api.readyState === WebSocket.OPEN) {
                 api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             }
@@ -356,4 +358,5 @@ export default SignalArena;
     
 
     
+
 
