@@ -1,12 +1,15 @@
 
+
 'use client';
 
 import { useBot } from '@/context/bot-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Signal, BarChart, BadgeDollarSign, Bot, AlertTriangle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Signal, BarChart, BadgeDollarSign, Bot, ChevronDown, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import SignalBotTradeLog from './signal-bot-trade-log';
 
 export default function SignalBotDashboard() {
   const { signalBots, stopSignalBot } = useBot();
@@ -74,39 +77,56 @@ export default function SignalBotDashboard() {
         <ScrollArea className="h-[calc(100vh-450px)]">
             <div className="space-y-4 pr-4">
                 {signalBots.map((bot) => (
-                    <Card key={bot.id} className={cn(bot.status === 'stopped' && 'opacity-60 bg-muted/50')}>
-                        <CardHeader>
-                            <CardTitle className="flex justify-between items-center">
-                                <span className="flex items-center gap-2 text-lg">
-                                    <Signal className="h-5 w-5" /> 
-                                    {bot.name}
-                                </span>
-                                <span className={cn(
-                                    "text-sm font-bold uppercase px-2 py-1 rounded-md",
-                                    bot.status === 'running' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
-                                )}>
-                                    {bot.status}
-                                </span>
-                            </CardTitle>
-                            <CardDescription>{bot.signalType}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex justify-between items-center">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-sm text-muted-foreground">P/L:</span>
-                                <span className={cn("text-xl font-bold font-mono", getProfitColor(bot.profit))}>
-                                    {formatCurrency(bot.profit)}
-                                </span>
-                            </div>
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => stopSignalBot(bot.id)}
-                                disabled={bot.status === 'stopped'}
-                            >
-                                Stop Bot
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <Collapsible key={bot.id} asChild>
+                        <Card className={cn(bot.status === 'stopped' && 'opacity-60 bg-muted/50')}>
+                            <CardHeader>
+                                <CardTitle className="flex justify-between items-center">
+                                    <span className="flex items-center gap-2 text-lg">
+                                        <Signal className="h-5 w-5" /> 
+                                        {bot.name}
+                                    </span>
+                                    <span className={cn(
+                                        "text-sm font-bold uppercase px-2 py-1 rounded-md",
+                                        bot.status === 'running' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                                    )}>
+                                        {bot.status}
+                                    </span>
+                                </CardTitle>
+                                <CardDescription>{bot.signalType}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex justify-between items-center">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-sm text-muted-foreground">P/L:</span>
+                                    <span className={cn("text-xl font-bold font-mono", getProfitColor(bot.profit))}>
+                                        {formatCurrency(bot.profit)}
+                                    </span>
+                                </div>
+                                <div>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => stopSignalBot(bot.id)}
+                                        disabled={bot.status === 'stopped'}
+                                        className="mr-2"
+                                    >
+                                        Stop Bot
+                                    </Button>
+                                    <CollapsibleTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                            <List className="h-4 w-4 mr-2" />
+                                            View Trades
+                                            <ChevronDown className="h-4 w-4 ml-2" />
+                                        </Button>
+                                    </CollapsibleTrigger>
+                                </div>
+                            </CardContent>
+                            <CollapsibleContent>
+                                <CardFooter className="flex-col items-start">
+                                    <SignalBotTradeLog trades={bot.trades} />
+                                </CardFooter>
+                            </CollapsibleContent>
+                        </Card>
+                    </Collapsible>
                 ))}
             </div>
         </ScrollArea>

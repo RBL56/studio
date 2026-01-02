@@ -1,4 +1,5 @@
 
+
 import { BotConfigurationValues, SignalBotConfigurationValues } from "@/components/bot-builder/bot-configuration-form";
 
 export type Strategy = {
@@ -28,4 +29,6 @@ export interface SignalBot {
     profit: number;
     config: BotConfigurationValues;
     consecutiveLosses?: number;
+    trades: Trade[];
 }
+
