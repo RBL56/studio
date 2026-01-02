@@ -2,7 +2,7 @@
 
 import { useDerivApi } from '@/context/deriv-api-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Bot, Signal, Trophy, CandlestickChart, Circle, Waypoints, Target } from 'lucide-react';
+import { ShieldAlert, Bot, Signal, CandlestickChart, Circle, Waypoints, Target } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BotProvider, useBot } from '@/context/bot-context';
