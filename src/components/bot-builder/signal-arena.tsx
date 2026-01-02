@@ -154,6 +154,7 @@ const SignalArena = () => {
     const tickDataRef = useRef<{ [key: string]: number[] }>({});
     const analysisDataRef = useRef<{ [key: string]: any }>({});
     const subscribedSymbols = useRef(new Set<string>());
+    const historyFetchedSymbols = useRef(new Set<string>());
     const strongSignalNotified = useRef(new Set<string>());
 
     const extractLastDigit = useCallback((price: number, marketSymbol: string) => {
@@ -292,22 +293,28 @@ const SignalArena = () => {
 
     const manageSubscriptions = useCallback(() => {
         if (!api || !isConnected) return;
-    
+
         const symbols = Object.keys(SYMBOL_CONFIG);
-        
+
         const subscribeWithDelay = (index: number) => {
             if (index >= symbols.length) return;
             const symbol = symbols[index];
-            if (api.readyState === WebSocket.OPEN) {
+            
+            // Only fetch history if it has not been fetched before in this session
+            if (!historyFetchedSymbols.current.has(symbol) && api.readyState === WebSocket.OPEN) {
                 api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
+                historyFetchedSymbols.current.add(symbol);
             }
-            setTimeout(() => subscribeWithDelay(index + 1), 200);
+            
+            setTimeout(() => subscribeWithDelay(index + 1), 200); 
         };
 
-        setApiStatus('Connected');
-        subscribeWithDelay(0);
-        
+        if (api.readyState === WebSocket.OPEN) {
+            setApiStatus('Connected');
+            subscribeWithDelay(0);
+        }
     }, [api, isConnected]);
+
 
     useEffect(() => {
         if (isConnected) {
@@ -318,7 +325,6 @@ const SignalArena = () => {
             return () => {
                 unsubscribe();
                 clearInterval(uiInterval);
-                subscribedSymbols.current.clear();
             };
         } else {
              setApiStatus('Disconnected');
@@ -477,4 +483,5 @@ const SignalArena = () => {
 
 export default SignalArena;
 
+    
     
