@@ -7,6 +7,8 @@ import { Button } from './ui/button';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { EvenOddAnalysis } from './even-odd-analysis';
+import { OverUnderAnalysis } from './over-under-analysis';
 
 export function DigitAnalysisTool() {
     const {
@@ -18,9 +20,7 @@ export function DigitAnalysisTool() {
         price,
         tickCount,
         digitStats,
-        evenOdd,
         analysis,
-        tickHistory,
         activeDigit,
         connect,
         disconnect,
@@ -136,17 +136,6 @@ export function DigitAnalysisTool() {
                     })}
                 </div>
                 
-                <div className="eo">
-                    <div className="even">
-                        <div className="even-percentage">{evenOdd.even}</div>
-                        <div className="stat-label">Even (0,2,4,6,8)</div>
-                    </div>
-                    <div className="odd">
-                        <div className="odd-percentage">{evenOdd.odd}</div>
-                        <div className="stat-label">Odd (1,3,5,7,9)</div>
-                    </div>
-                </div>
-                
                 <div className="analysis-summary">
                     <div className="summary-box">
                         <div className="summary-label">Most Frequent</div>
@@ -167,30 +156,8 @@ export function DigitAnalysisTool() {
                 </div>
             </div>
 
-            <div className="digit-analysis-main-card">
-                <div className="digit-analysis-card-title">Recent Ticks (Historical + Real-time)</div>
-                <div className="tick-history">
-                    {tickHistory.length === 0 ? (
-                        <div className="tick-item">Collecting data...</div>
-                    ) : (
-                        tickHistory.map((tick, index) => {
-                            const time = new Date(tick.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                            let digitColor = '#60a5fa';
-                            if (tick.digit === 0) digitColor = '#8b5cf6';
-                            else if (tick.digit % 2 === 0) digitColor = '#22c55e';
-                            else digitColor = '#ef4444';
-                            
-                            return(
-                                <div className="tick-item" key={index}>
-                                    <span>{time}</span>
-                                    <span>{tick.price.toFixed(marketConfig[currentMarket]?.decimals || 2)}</span>
-                                    <span style={{ color: digitColor, fontWeight: 'bold' }}>({tick.digit})</span>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
+            <EvenOddAnalysis />
+            <OverUnderAnalysis />
         </div>
     );
 }

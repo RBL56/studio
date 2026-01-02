@@ -44,6 +44,7 @@ interface DigitAnalysisContextType {
     setTicksToFetch: (ticks: number) => void;
     maxTicks: number;
     lastDigits: number[];
+    getOverUnder: (barrier: number) => { over: string; under: string; overCount: number; underCount: number };
 }
 
 type Tick = {
@@ -143,7 +144,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
         ticksRef.current[currentIndexRef.current] = tick;
         digitCountsRef.current[tick.digit]++;
-        setLastDigits(prev => [...prev.slice(-10), tick.digit]);
+        setLastDigits(prev => [...prev.slice(-49), tick.digit]);
         
         if (totalTicksProcessedRef.current < ticksToFetch) {
             totalTicksProcessedRef.current++;
@@ -259,7 +260,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
                     processTick({ price, digit, timestamp: Date.now() }, true);
                 });
                 
-                setLastDigits(prev => [...prev, ...newDigits].slice(-20)); // Keep a bit more history initially
+                setLastDigits(prev => [...prev, ...newDigits].slice(-50));
                 setCollectedCount(prices.length);
                 setIsCollecting(false);
                 updateStatus('connected', 'Real-time monitoring active');
@@ -299,6 +300,30 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
             setCurrentMarket(newMarket);
         }
     };
+
+    const getOverUnder = useCallback((barrier: number) => {
+        const total = Math.min(totalTicksProcessedRef.current, ticksToFetch);
+        if (total === 0) return { over: '0.0%', under: '0.0%', overCount: 0, underCount: 0 };
+    
+        let overCount = 0;
+        let underCount = 0;
+    
+        for (let i = 0; i < 10; i++) {
+            const count = digitCountsRef.current[i];
+            if (i > barrier) {
+                overCount += count;
+            } else if (i < barrier) {
+                underCount += count;
+            }
+        }
+        
+        return {
+            over: `${((overCount / total) * 100).toFixed(1)}%`,
+            under: `${((underCount / total) * 100).toFixed(1)}%`,
+            overCount,
+            underCount,
+        };
+    }, [ticksToFetch]);
     
     useEffect(() => {
         return () => {
@@ -329,6 +354,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         setTicksToFetch,
         maxTicks: MAX_TICKS_API_LIMIT,
         lastDigits,
+        getOverUnder,
     };
 
     return (
