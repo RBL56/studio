@@ -366,44 +366,46 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
                 purchaseContract('speed', config, currentStakeRef.current);
             }
         } else if (botType === 'signal' && signalBotId) {
-             setSignalBots(prevBots => prevBots.map(bot => {
-                if(bot.id === signalBotId){
-                    const newProfit = bot.profit + contract.profit;
-                    const isWin = contract.status === 'won';
-                    let nextStake = bot.config.initialStake;
-                    let consecutiveLosses = bot.consecutiveLosses || 0;
-                    
-                    if (isWin) {
-                        consecutiveLosses = 0;
-                    } else {
-                        consecutiveLosses++;
-                        if(bot.config.useMartingale && bot.config.martingaleFactor){
-                           nextStake = contractInfo.stake * bot.config.martingaleFactor;
+             setSignalBots(currentBots => {
+                const newBots = currentBots.map(bot => {
+                    if (bot.id === signalBotId) {
+                        const newProfit = bot.profit + contract.profit;
+                        const isWin = contract.status === 'won';
+                        let nextStake = bot.config.initialStake;
+                        let consecutiveLosses = bot.consecutiveLosses || 0;
+                        
+                        if (isWin) {
+                            consecutiveLosses = 0;
+                        } else {
+                            consecutiveLosses++;
+                            if(bot.config.useMartingale && bot.config.martingaleFactor){
+                               nextStake = contractInfo.stake * bot.config.martingaleFactor;
+                            }
                         }
-                    }
 
-                    const updatedBot = { ...bot, profit: newProfit, consecutiveLosses };
+                        const updatedBot = { ...bot, profit: newProfit, consecutiveLosses };
 
-                    // Check stop conditions for this specific signal bot
-                    if (updatedBot.config.takeProfit && updatedBot.profit >= updatedBot.config.takeProfit) {
-                        toast({ title: "Take-Profit Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
-                        return { ...updatedBot, status: 'stopped' };
+                        // Check stop conditions
+                        if (updatedBot.config.takeProfit && updatedBot.profit >= updatedBot.config.takeProfit) {
+                            toast({ title: "Take-Profit Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
+                            return { ...updatedBot, status: 'stopped' };
+                        }
+                        if (updatedBot.config.stopLossType === 'consecutive_losses' && updatedBot.config.stopLossConsecutive && consecutiveLosses >= updatedBot.config.stopLossConsecutive) {
+                             toast({ title: "Stop-Loss Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
+                             return { ...updatedBot, status: 'stopped' };
+                        }
+                        
+                        // If not stopped, purchase next contract
+                        if (updatedBot.status === 'running') {
+                           purchaseContract('signal', updatedBot.config, nextStake, updatedBot.id);
+                        }
+                        
+                        return updatedBot;
                     }
-                    if (updatedBot.config.stopLossType === 'consecutive_losses' && updatedBot.config.stopLossConsecutive && consecutiveLosses >= updatedBot.config.stopLossConsecutive) {
-                         toast({ title: "Stop-Loss Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
-                         return { ...updatedBot, status: 'stopped' };
-                    }
-
-
-                    // If not stopped, purchase next contract
-                    if (updatedBot.status === 'running') {
-                       purchaseContract('signal', updatedBot.config, nextStake, updatedBot.id);
-                    }
-                    
-                    return updatedBot;
-                }
-                return bot;
-             }));
+                    return bot;
+                });
+                return newBots;
+             });
         }
     }
   }, [stopBot, toast, extractLastDigit, purchaseContract]);
