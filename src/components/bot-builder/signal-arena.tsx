@@ -150,7 +150,7 @@ const SignalArena = () => {
         }
         filteredData.sort((a, b) => (b?.confidence ?? 0) - (a?.confidence ?? 0));
         setDisplayedCards(filteredData);
-    }, [activeFilter, analysisData]);
+    }, [activeFilter, analysisData, FILTERS]);
 
     const handleMessage = useCallback((data: any) => {
         if (data.error) {
@@ -294,7 +294,7 @@ const SignalArena = () => {
                         <button className="signal-bot-btn signal-bot-under" disabled={card.percentages.under_6 < 66} onClick={() => runBot(card.symbol, 'under')}><Bot className="h-4 w-4" /> UNDER</button>
                     </div>
                 </div>
-                <div className="signal-update-time">Ticks: {card.ticks_analyzed} • Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
+                <div className="signal-update-time">Ticks Analyzed: {card.ticks_analyzed} • Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
             </div>
         );
     }
