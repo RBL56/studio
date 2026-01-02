@@ -195,10 +195,9 @@ const SignalArena = () => {
                 }
                 analysisDataRef.current[symbol] = result;
                 setUpdateTime(new Date().toLocaleTimeString());
-                filterAndSortData();
             }
         }
-    }, [filterAndSortData]);
+    }, []);
 
 
     const handleMessage = useCallback((data: any) => {
@@ -259,7 +258,7 @@ const SignalArena = () => {
     
     useEffect(() => {
         filterAndSortData();
-    }, [analysisDataRef, activeFilter, filterAndSortData]);
+    }, [analysisDataRef, activeFilter, filterAndSortData, updateTime]);
 
 
     const renderCard = (card: any) => {
@@ -380,6 +379,7 @@ export default SignalArena;
     
 
     
+
 
 
 
