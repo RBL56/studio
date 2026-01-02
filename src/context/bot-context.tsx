@@ -96,7 +96,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const [signalBotConfig, setSignalBotConfig] = useState<SignalBotConfigurationValues>({
     initialStake: 1,
     takeProfit: 10,
-    stopLossConsecutive: 5,
+    stopLossConsecutive: 3,
     useMartingale: true,
     martingaleFactor: 2.1,
   });

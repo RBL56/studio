@@ -310,8 +310,6 @@ const SignalArena = () => {
     }, [api, isConnected]);
 
     useEffect(() => {
-        if (activeTab !== 'signal-arena') return;
-
         if (isConnected) {
             manageSubscriptions();
             const unsubscribe = subscribeToMessages(handleMessage);
@@ -320,19 +318,12 @@ const SignalArena = () => {
             return () => {
                 unsubscribe();
                 clearInterval(uiInterval);
-                if (api && api.readyState === WebSocket.OPEN) {
-                    try {
-                        api.send(JSON.stringify({ forget_all: 'ticks' }));
-                    } catch (e) {
-                        console.error("Error forgetting subscriptions", e);
-                    }
-                }
                 subscribedSymbols.current.clear();
             };
         } else {
              setApiStatus('Disconnected');
         }
-    }, [isConnected, activeTab, manageSubscriptions, handleMessage, subscribeToMessages, filterAndSortData, api]);
+    }, [isConnected, manageSubscriptions, handleMessage, subscribeToMessages, filterAndSortData, api]);
     
     
     const renderCard = (card: any) => {
