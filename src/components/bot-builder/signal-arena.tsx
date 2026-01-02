@@ -136,12 +136,12 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 
 const SignalArena = () => {
     const { api, isConnected, subscribeToMessages, status: apiStatus, marketConfig } = useDerivApi();
-    const [tickData, setTickData] = useState<{ [key: string]: number[] }>({});
-    const [analysisData, setAnalysisData] = useState<{ [key: string]: any }>({});
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
     
+    const tickDataRef = useRef<{ [key: string]: number[] }>({});
+    const analysisDataRef = useRef<{ [key: string]: any }>({});
     const subscribedSymbols = useRef(new Set<string>());
     const strongSignalNotified = useRef(new Set<string>());
 
@@ -163,7 +163,7 @@ const SignalArena = () => {
     }), []);
 
     const filterAndSortData = useCallback(() => {
-        let filteredData = Object.values(analysisData).filter(d => d !== null);
+        let filteredData = Object.values(analysisDataRef.current).filter(d => d !== null);
         if (activeFilter !== 'all') {
             filteredData = filteredData.filter(d => {
                 if (!d) return false;
@@ -177,7 +177,29 @@ const SignalArena = () => {
         }
         filteredData.sort((a, b) => (b?.confidence ?? 0) - (a?.confidence ?? 0));
         setDisplayedCards(filteredData);
-    }, [activeFilter, analysisData]);
+    }, [activeFilter]);
+
+    const runAnalysis = useCallback((symbol: string) => {
+        const digits = tickDataRef.current[symbol];
+        if (digits && digits.length >= 100) {
+            const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol]?.name || symbol);
+            if (result) {
+                const previousResult = analysisDataRef.current[symbol];
+                if (result.strong_signal && (!previousResult || !previousResult.strong_signal)) {
+                    if (!strongSignalNotified.current.has(symbol)) {
+                        playSound();
+                        strongSignalNotified.current.add(symbol);
+                    }
+                } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
+                    strongSignalNotified.current.delete(symbol);
+                }
+                analysisDataRef.current[symbol] = result;
+                setUpdateTime(new Date().toLocaleTimeString());
+                filterAndSortData();
+            }
+        }
+    }, [filterAndSortData]);
+
 
     const handleMessage = useCallback((data: any) => {
         if (data.error) {
@@ -190,12 +212,12 @@ const SignalArena = () => {
         if (data.msg_type === 'history') {
             const symbol = data.echo_req.ticks_history;
             const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
-            
-            setTickData(prev => ({ ...prev, [symbol]: newDigits }));
+            tickDataRef.current[symbol] = newDigits;
 
             if (api && api.readyState === WebSocket.OPEN) {
                 api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             }
+            runAnalysis(symbol);
         }
 
         if (data.msg_type === 'tick') {
@@ -203,17 +225,16 @@ const SignalArena = () => {
             const symbol = tick.symbol;
             if (subscribedSymbols.current.has(symbol)) {
                 const newDigit = extractLastDigit(parseFloat(tick.quote), symbol);
-                setTickData(prev => {
-                    const existingTicks = prev[symbol] || [];
-                    const updatedTicks = [...existingTicks, newDigit];
-                    if (updatedTicks.length > 500) {
-                        updatedTicks.shift();
-                    }
-                    return { ...prev, [symbol]: updatedTicks };
-                });
+                const existingTicks = tickDataRef.current[symbol] || [];
+                const updatedTicks = [...existingTicks, newDigit];
+                if (updatedTicks.length > 500) {
+                    updatedTicks.shift();
+                }
+                tickDataRef.current[symbol] = updatedTicks;
+                runAnalysis(symbol);
             }
         }
-    }, [extractLastDigit, api]);
+    }, [extractLastDigit, api, runAnalysis]);
 
     useEffect(() => {
         if (!api || !isConnected) return;
@@ -235,41 +256,10 @@ const SignalArena = () => {
         const unsubscribe = subscribeToMessages(handleMessage);
         return () => unsubscribe();
     }, [handleMessage, subscribeToMessages]);
-
-    useEffect(() => {
-        const updatedAnalysis: { [key: string]: any } = {};
-        let needsUpdate = false;
-        for (const symbol in tickData) {
-            if (Object.prototype.hasOwnProperty.call(tickData, symbol)) {
-                const digits = tickData[symbol];
-                if (digits && digits.length >= 100) {
-                    const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol]?.name || symbol);
-                    if (result) {
-                        const previousResult = analysisData[symbol];
-                        if (result.strong_signal && (!previousResult || !previousResult.strong_signal)) {
-                            if (!strongSignalNotified.current.has(symbol)) {
-                                playSound();
-                                strongSignalNotified.current.add(symbol);
-                            }
-                        } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
-                            strongSignalNotified.current.delete(symbol);
-                        }
-
-                        updatedAnalysis[symbol] = result;
-                        needsUpdate = true;
-                    }
-                }
-            }
-        }
-        if (needsUpdate) {
-             setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
-             setUpdateTime(new Date().toLocaleTimeString());
-        }
-    }, [tickData, analysisData]);
     
     useEffect(() => {
         filterAndSortData();
-    }, [analysisData, activeFilter, filterAndSortData]);
+    }, [analysisDataRef, activeFilter, filterAndSortData]);
 
 
     const renderCard = (card: any) => {
@@ -332,11 +322,11 @@ const SignalArena = () => {
         const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS] || Object.keys(SYMBOL_CONFIG);
         const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol));
         const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
-            !analysisData[symbol] || (tickData[symbol]?.length || 0) < 100
+            !analysisDataRef.current[symbol] || (tickDataRef.current[symbol]?.length || 0) < 100
         );
 
         if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === symbolsInFilter.length) {
-             const loadingSymbolsCount = symbolsInFilter.filter(s => subscribedSymbols.current.has(s) && (tickData[s] === undefined || (tickData[s]?.length ?? 0) < 100)).length;
+             const loadingSymbolsCount = symbolsInFilter.filter(s => subscribedSymbols.current.has(s) && (tickDataRef.current[s] === undefined || (tickDataRef.current[s]?.length ?? 0) < 100)).length;
              if (loadingSymbolsCount > 0) {
                  return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Waiting for live data for {loadingSymbolsCount} market(s)...</p></div>;
              }
@@ -356,7 +346,7 @@ const SignalArena = () => {
                         <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol]?.name || symbol}</h3><div className="symbol">{symbol}</div></div></div>
                         <div className="signal-loading" style={{padding: '20px 0'}}>
                             <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
-                            <p style={{fontSize: '0.875rem'}}>Collecting historical data... ({(tickData[symbol]?.length || 0)}/500)</p>
+                            <p style={{fontSize: '0.875rem'}}>Collecting historical data... ({(tickDataRef.current[symbol]?.length || 0)}/500)</p>
                         </div>
                     </div>
                 ))}
@@ -390,6 +380,7 @@ export default SignalArena;
     
 
     
+
 
 
 
