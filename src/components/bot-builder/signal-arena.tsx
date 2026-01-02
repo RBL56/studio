@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
 import type { SignalBot } from '@/lib/types';
+import SignalBotConfigPanel from './signal-bot-config-panel';
 
 
 // --- Sound Utility ---
@@ -143,7 +144,7 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 
 const SignalArena = () => {
     const { api, isConnected, subscribeToMessages, marketConfig } = useDerivApi();
-    const { startSignalBot, setActiveTab, setActiveBuilderTab, activeTab } = useBot();
+    const { startSignalBot, setActiveTab, setActiveBuilderTab, activeTab, signalBots } = useBot();
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
@@ -210,13 +211,14 @@ const SignalArena = () => {
                 tradeType: 'over_under',
                 predictionType: direction,
                 lastDigitPrediction: prediction,
-                initialStake: 1.00,
                 ticks: 1,
+                // These will be overridden by global signal bot config from context
+                initialStake: 1, 
                 takeProfit: 10,
-                stopLossType: 'amount',
-                stopLossAmount: 50,
+                stopLossType: 'consecutive_losses',
+                stopLossConsecutive: 5,
                 useMartingale: true,
-                martingaleFactor: 2.1,
+                martingaleFactor: 2.1
             }
         }
         
@@ -240,7 +242,7 @@ const SignalArena = () => {
                             playSound(message);
                             strongSignalNotified.current.add(symbol);
                             
-                            if (activeTab !== 'signal-arena' && activeTab !== 'trading-view') {
+                             if (activeTab !== 'signal-arena' && activeTab !== 'trading-view') {
                                 setSignalAlert(result);
                             }
                         }
@@ -377,15 +379,13 @@ const SignalArena = () => {
                     <div className="signal-hot-digits"><span>🔥 Hot Digits:</span><span>{card.hot_digits.length > 0 ? card.hot_digits.join(', ') : 'None'}</span></div>
                     <div className="signal-bot-buttons">
                         {card.strong_signal && (
-                            overPercentage >= underPercentage ? (
-                                <button className="signal-bot-btn signal-bot-over" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Over 3'}, true)}>
-                                    <Bot className="h-4 w-4" /> OVER
-                                </button>
-                            ) : (
-                                <button className="signal-bot-btn signal-bot-under" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Under 6'}, true)}>
-                                    <Bot className="h-4 w-4" /> UNDER
-                                </button>
-                            )
+                            <button
+                                className={cn('signal-bot-btn', overPercentage >= underPercentage ? 'signal-bot-over' : 'signal-bot-under')}
+                                onClick={() => runBotFromSignal(card, true)}
+                                disabled={signalBots.some(b => b.market === card.symbol && b.status === 'running')}
+                            >
+                                <Bot className="h-4 w-4" /> {overPercentage >= underPercentage ? 'OVER' : 'UNDER'}
+                            </button>
                         )}
                     </div>
                 </div>
@@ -446,10 +446,7 @@ const SignalArena = () => {
         <div className="signal-center-body">
             <div className="signal-center-container">
                 <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
-                <div className="signal-risk-panel">
-                    <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
-                    <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
-                </div>
+                <SignalBotConfigPanel />
                 <div className="signal-filters">
                     {Object.keys(FILTERS).map(filter => (
                         <button key={filter} className={cn("signal-filter-btn", { 'active': activeFilter === filter })} onClick={() => setActiveFilter(filter)}>

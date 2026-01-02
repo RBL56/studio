@@ -25,7 +25,7 @@ const formSchema = z.object({
   takeProfit: z.coerce.number().positive('Take profit must be positive').optional(),
   stopLossType: z.enum(['amount', 'consecutive_losses']).default('amount'),
   stopLossAmount: z.coerce.number().positive('Stop loss must be positive').optional(),
-  stopLossConsecutive: z.coerce.number().int().min(1, 'Must be at least 1').max(5, 'Cannot exceed 5').optional(),
+  stopLossConsecutive: z.coerce.number().int().min(1, 'Must be at least 1').max(10, 'Cannot exceed 10').optional(),
   useMartingale: z.boolean().default(false),
   martingaleFactor: z.coerce.number().min(1, 'Factor must be at least 1').optional(),
   useBulkTrading: z.boolean().default(false),
@@ -37,6 +37,8 @@ const formSchema = z.object({
 });
 
 export type BotConfigurationValues = z.infer<typeof formSchema>;
+export type SignalBotConfigurationValues = Pick<BotConfigurationValues, 'initialStake' | 'takeProfit' | 'stopLossConsecutive' | 'useMartingale' | 'martingaleFactor'>;
+
 
 export default function BotConfigurationForm() {
   const { startBot, stopBot, resetStats, isBotRunning, form, setForm } = useBot();
@@ -298,7 +300,7 @@ export default function BotConfigurationForm() {
                         <FormItem>
                             <FormLabel>Consecutive Losses</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="1-5" {...field} value={field.value ?? ''} disabled={isBotRunning} />
+                                <Input type="number" placeholder="1-10" {...field} value={field.value ?? ''} disabled={isBotRunning} />
                             </FormControl>
                              <FormMessage />
                         </FormItem>

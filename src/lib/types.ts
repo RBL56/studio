@@ -1,5 +1,5 @@
 
-import { BotConfigurationValues } from "@/components/bot-builder/bot-configuration-form";
+import { BotConfigurationValues, SignalBotConfigurationValues } from "@/components/bot-builder/bot-configuration-form";
 
 export type Strategy = {
     name: string;

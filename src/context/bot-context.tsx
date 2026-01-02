@@ -3,7 +3,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
-import type { BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
+import type { BotConfigurationValues, SignalBotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
 import type { Trade, SignalBot } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDerivApi } from './deriv-api-context';
@@ -33,6 +33,8 @@ interface BotContextType {
   signalBots: SignalBot[];
   startSignalBot: (config: SignalBot) => void;
   stopSignalBot: (id: string) => void;
+  signalBotConfig: SignalBotConfigurationValues;
+  setSignalBotConfig: React.Dispatch<React.SetStateAction<SignalBotConfigurationValues>>;
   
   // Tabs
   activeTab: string;
@@ -91,6 +93,13 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
   // SignalBot state
   const [signalBots, setSignalBots] = useState<SignalBot[]>([]);
+  const [signalBotConfig, setSignalBotConfig] = useState<SignalBotConfigurationValues>({
+    initialStake: 1,
+    takeProfit: 10,
+    stopLossConsecutive: 5,
+    useMartingale: true,
+    martingaleFactor: 2.1,
+  });
   const signalBotsRef = useRef<SignalBot[]>([]);
 
   // UI State
@@ -380,11 +389,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
                         toast({ title: "Take-Profit Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
                         return { ...updatedBot, status: 'stopped' };
                     }
-                    if (updatedBot.config.stopLossType === 'amount' && updatedBot.config.stopLossAmount && updatedBot.profit <= -updatedBot.config.stopLossAmount) {
-                        toast({ title: "Stop-Loss Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
-                        return { ...updatedBot, status: 'stopped' };
-                    }
-                     if (updatedBot.config.stopLossType === 'consecutive_losses' && updatedBot.config.stopLossConsecutive && consecutiveLosses >= updatedBot.config.stopLossConsecutive) {
+                    if (updatedBot.config.stopLossType === 'consecutive_losses' && updatedBot.config.stopLossConsecutive && consecutiveLosses >= updatedBot.config.stopLossConsecutive) {
                          toast({ title: "Stop-Loss Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
                          return { ...updatedBot, status: 'stopped' };
                     }
@@ -461,11 +466,24 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   }, [api, isConnected, toast, connectDigit, digitStatus, purchaseContract]);
 
   const startSignalBot = useCallback((newBot: SignalBot) => {
-      setSignalBots(prev => [...prev, newBot]);
-      purchaseContract('signal', newBot.config, newBot.config.initialStake, newBot.id);
+      // Apply global signal bot config
+      const finalConfig: BotConfigurationValues = {
+        ...newBot.config,
+        initialStake: signalBotConfig.initialStake,
+        takeProfit: signalBotConfig.takeProfit,
+        stopLossType: 'consecutive_losses',
+        stopLossConsecutive: signalBotConfig.stopLossConsecutive,
+        useMartingale: signalBotConfig.useMartingale,
+        martingaleFactor: signalBotConfig.martingaleFactor
+      };
+      
+      const botToStart: SignalBot = { ...newBot, config: finalConfig };
+
+      setSignalBots(prev => [...prev, botToStart]);
+      purchaseContract('signal', botToStart.config, botToStart.config.initialStake, botToStart.id);
       setActiveTab('bot-builder');
       setActiveBuilderTab('signalbot');
-  }, [purchaseContract, setActiveTab, setActiveBuilderTab]);
+  }, [purchaseContract, setActiveTab, setActiveBuilderTab, signalBotConfig]);
 
   const stopSignalBot = useCallback((id: string) => {
       setSignalBots(prev => prev.map(bot => bot.id === id ? { ...bot, status: 'stopped' } : bot));
@@ -537,6 +555,8 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       signalBots,
       startSignalBot,
       stopSignalBot,
+      signalBotConfig,
+      setSignalBotConfig,
       activeTab,
       setActiveTab,
       activeBuilderTab,
