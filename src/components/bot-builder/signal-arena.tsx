@@ -143,7 +143,7 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 
 const SignalArena = () => {
     const { api, isConnected, subscribeToMessages, marketConfig } = useDerivApi();
-    const { startSignalBot, setActiveTab, setActiveBuilderTab } = useBot();
+    const { startSignalBot, setActiveTab, setActiveBuilderTab, activeTab } = useBot();
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
@@ -154,7 +154,6 @@ const SignalArena = () => {
     const analysisDataRef = useRef<{ [key: string]: any }>({});
     const subscribedSymbols = useRef(new Set<string>());
     const strongSignalNotified = useRef(new Set<string>());
-
 
     const extractLastDigit = useCallback((price: number, marketSymbol: string) => {
         const config = marketConfig[marketSymbol];
@@ -240,7 +239,10 @@ const SignalArena = () => {
                             const message = `${result.name}, ${result.strong_signal_type}`;
                             playSound(message);
                             strongSignalNotified.current.add(symbol);
-                            setSignalAlert(result);
+                            
+                            if (activeTab !== 'signal-arena' && activeTab !== 'trading-view') {
+                                setSignalAlert(result);
+                            }
                         }
                     } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
                         strongSignalNotified.current.delete(symbol);
@@ -250,7 +252,7 @@ const SignalArena = () => {
             }
         });
         setUpdateTime(new Date().toLocaleTimeString());
-    }, []);
+    }, [activeTab]);
 
 
     const handleMessage = useCallback((data: any) => {
@@ -282,8 +284,9 @@ const SignalArena = () => {
                 updatedTicks.shift();
             }
             tickDataRef.current[symbol] = updatedTicks;
+            runAnalysis();
         }
-    }, [extractLastDigit, api]);
+    }, [extractLastDigit, api, runAnalysis]);
 
     const manageSubscriptions = useCallback(() => {
         if (!api || !isConnected) return;
@@ -296,7 +299,7 @@ const SignalArena = () => {
             if (api.readyState === WebSocket.OPEN) {
                 api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
             }
-            setTimeout(() => subscribeWithDelay(index + 1), 200); // 200ms delay between subscriptions
+            setTimeout(() => subscribeWithDelay(index + 1), 200);
         };
 
         setApiStatus('Connected');
@@ -305,16 +308,15 @@ const SignalArena = () => {
     }, [api, isConnected]);
 
     useEffect(() => {
+        if (activeTab !== 'signal-arena') return;
+
         if (isConnected) {
             manageSubscriptions();
             const unsubscribe = subscribeToMessages(handleMessage);
-
-            const analysisInterval = setInterval(runAnalysis, 1000);
             const uiInterval = setInterval(filterAndSortData, 1000);
 
             return () => {
                 unsubscribe();
-                clearInterval(analysisInterval);
                 clearInterval(uiInterval);
                 if (api && api.readyState === WebSocket.OPEN) {
                     try {
@@ -328,7 +330,7 @@ const SignalArena = () => {
         } else {
              setApiStatus('Disconnected');
         }
-    }, [isConnected, manageSubscriptions, handleMessage, subscribeToMessages, runAnalysis, filterAndSortData, api]);
+    }, [isConnected, activeTab, manageSubscriptions, handleMessage, subscribeToMessages, filterAndSortData, api]);
     
     
     const renderCard = (card: any) => {
@@ -346,6 +348,9 @@ const SignalArena = () => {
         const getDigitClass = (pct: number) => {
             if (pct >= 14) return 'signal-digit-hot'; if (pct >= 11) return 'signal-digit-warm'; return '';
         };
+
+        const overPercentage = card.percentages.over_3 || 0;
+        const underPercentage = card.percentages.under_6 || 0;
 
         return (
              <div key={card.symbol} className="signal-card">
@@ -371,8 +376,17 @@ const SignalArena = () => {
                 <div className="signal-card-footer">
                     <div className="signal-hot-digits"><span>🔥 Hot Digits:</span><span>{card.hot_digits.length > 0 ? card.hot_digits.join(', ') : 'None'}</span></div>
                     <div className="signal-bot-buttons">
-                        <button className="signal-bot-btn signal-bot-over" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Over 3'}, true)}><Bot className="h-4 w-4" /> OVER</button>
-                        <button className="signal-bot-btn signal-bot-under" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Under 6'}, true)}><Bot className="h-4 w-4" /> UNDER</button>
+                        {card.strong_signal && (
+                            overPercentage >= underPercentage ? (
+                                <button className="signal-bot-btn signal-bot-over" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Over 3'}, true)}>
+                                    <Bot className="h-4 w-4" /> OVER
+                                </button>
+                            ) : (
+                                <button className="signal-bot-btn signal-bot-under" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Under 6'}, true)}>
+                                    <Bot className="h-4 w-4" /> UNDER
+                                </button>
+                            )
+                        )}
                     </div>
                 </div>
                 <div className="signal-update-time">Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
