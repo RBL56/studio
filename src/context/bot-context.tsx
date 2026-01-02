@@ -4,7 +4,7 @@
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import type { BotConfigurationValues } from '@/components/bot-builder/bot-configuration-form';
-import type { Trade } from '@/lib/types';
+import type { Trade, SignalBot } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDerivApi } from './deriv-api-context';
 import { UseFormReturn } from 'react-hook-form';
@@ -13,6 +13,7 @@ import { useDigitAnalysis } from './digit-analysis-context';
 export type BotStatus = 'idle' | 'running' | 'stopped' | 'waiting';
 
 interface BotContextType {
+  // SpeedBot
   trades: Trade[];
   botStatus: BotStatus;
   totalProfit: number;
@@ -26,11 +27,18 @@ interface BotContextType {
   resetStats: () => void;
   form: UseFormReturn<BotConfigurationValues> | null;
   setForm: (form: UseFormReturn<BotConfigurationValues>) => void;
+  tradeLogRef: React.RefObject<HTMLDivElement>;
+
+  // SignalBot
+  signalBots: SignalBot[];
+  startSignalBot: (config: SignalBot) => void;
+  stopSignalBot: (id: string) => void;
+  
+  // Tabs
   activeTab: string;
   setActiveTab: (tab: string) => void;
   activeBuilderTab: string;
   setActiveBuilderTab: (tab: string) => void;
-  tradeLogRef: React.RefObject<HTMLDivElement>;
 }
 
 const BotContext = createContext<BotContextType | undefined>(undefined);
@@ -71,6 +79,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const { lastDigits, connect: connectDigit, disconnect: disconnectDigit, status: digitStatus } = useDigitAnalysis();
 
+  // SpeedBot state
   const [trades, setTrades] = useState<Trade[]>([]);
   const [botStatus, setBotStatus] = useState<BotStatus>('idle');
   const [totalProfit, setTotalProfit] = useState(0);
@@ -79,6 +88,12 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const [totalWins, setTotalWins] = useState(0);
   const [totalLosses, setTotalLosses] = useState(0);
   const [form, setForm] = useState<UseFormReturn<BotConfigurationValues> | null>(null);
+
+  // SignalBot state
+  const [signalBots, setSignalBots] = useState<SignalBot[]>([]);
+  const signalBotsRef = useRef<SignalBot[]>([]);
+
+  // UI State
   const [activeTab, setActiveTab] = useState('bot-builder');
   const [activeBuilderTab, setActiveBuilderTab] = useState('speedbot');
 
@@ -87,7 +102,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
   const isRunningRef = useRef(false);
   const totalProfitRef = useRef(0);
   const bulkTradesCompletedRef = useRef(0);
-  const openContractsRef = useRef(new Map<number, {stake: number}>());
+  const openContractsRef = useRef(new Map<number, {stake: number, botType: 'speed' | 'signal', signalBotId?: string}>());
   const tradeLogRef = useRef<HTMLDivElement>(null);
   const consecutiveLossesRef = useRef(0);
   const waitingForEntryRef = useRef(false);
@@ -96,6 +111,10 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     totalProfitRef.current = totalProfit;
   }, [totalProfit]);
   
+  useEffect(() => {
+    signalBotsRef.current = signalBots;
+  }, [signalBots]);
+
   const stopBot = useCallback((showToast = true) => {
     if (!isRunningRef.current && botStatus === 'idle') return;
     
@@ -110,7 +129,7 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     if (showToast) {
         toast({
             title: "Bot Stopped",
-            description: "The trading bot has been stopped.",
+            description: "The SpeedBot has been stopped.",
         });
     }
   }, [toast, botStatus, digitStatus, disconnectDigit]);
@@ -131,11 +150,14 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     setTotalWins(0);
     setTotalLosses(0);
     bulkTradesCompletedRef.current = 0;
-    openContractsRef.current.clear();
     consecutiveLossesRef.current = 0;
+    // We only clear contracts related to the speedbot
+    openContractsRef.current.forEach((val, key) => {
+        if(val.botType === 'speed') openContractsRef.current.delete(key)
+    });
     toast({
         title: 'Stats Reset',
-        description: 'The trade log and statistics have been cleared.',
+        description: 'The SpeedBot trade log and statistics have been cleared.',
     });
   }, [toast]);
 
@@ -151,25 +173,26 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const purchaseContract = useCallback(() => {
-    if (!api || !configRef.current) {
-        if (isRunningRef.current) stopBot(false);
-        return;
-    }
-    
-    if (!isRunningRef.current && openContractsRef.current.size === 0) {
-        return;
-    }
+  const purchaseContract = useCallback((
+    botType: 'speed' | 'signal',
+    config: BotConfigurationValues,
+    stake: number,
+    signalBotId?: string,
+  ) => {
+    if (!api) return;
 
-    const config = configRef.current;
+    if (botType === 'speed' && !isRunningRef.current) return;
+    if (botType === 'signal' && !signalBotsRef.current.find(b => b.id === signalBotId && b.status === 'running')) return;
     
-    waitingForEntryRef.current = false;
-    setBotStatus('running');
+    if (botType === 'speed') {
+        waitingForEntryRef.current = false;
+        setBotStatus('running');
+    }
 
     const contractType = getContractType(config.predictionType);
 
     const parameters: any = {
-      amount: currentStakeRef.current,
+      amount: stake,
       basis: "stake",
       contract_type: contractType,
       currency: "USD",
@@ -184,10 +207,15 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
     api.send(JSON.stringify({
       buy: "1",
-      price: currentStakeRef.current,
+      price: stake,
       parameters,
+      passthrough: {
+        botType,
+        signalBotId,
+        stake,
+      }
     }));
-  }, [api, stopBot]);
+  }, [api]);
   
   const extractLastDigit = useCallback((price: number, market: string) => {
       const config = marketConfig[market];
@@ -210,27 +238,29 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
             const firstContract = openContractsRef.current.keys().next().value;
             if (firstContract) openContractsRef.current.delete(firstContract);
         }
-        if (isRunningRef.current && !configRef.current?.useBulkTrading) {
-            stopBot(false);
-        }
+        if (isRunningRef.current) stopBot(false);
       }
       return;
     }
     
     if (data.msg_type === 'buy') {
         if(data.buy.contract_id){
-            openContractsRef.current.set(data.buy.contract_id, { stake: data.buy.buy_price });
-            const newTrade: Trade = {
-                id: data.buy.contract_id,
-                description: data.buy.longcode,
-                marketId: configRef.current?.market || '',
-                stake: data.buy.buy_price,
-                payout: 0,
-                isWin: false,
-            };
-            setTrades(prev => [newTrade, ...prev]);
-            setTotalStake(prev => prev + newTrade.stake);
-            setTotalRuns(prev => prev + 1);
+            const { botType, signalBotId, stake } = data.passthrough;
+            openContractsRef.current.set(data.buy.contract_id, { stake, botType, signalBotId });
+
+            if(botType === 'speed'){
+                const newTrade: Trade = {
+                    id: data.buy.contract_id,
+                    description: data.buy.longcode,
+                    marketId: configRef.current?.market || '',
+                    stake: data.buy.buy_price,
+                    payout: 0,
+                    isWin: false,
+                };
+                setTrades(prev => [newTrade, ...prev]);
+                setTotalStake(prev => prev + newTrade.stake);
+                setTotalRuns(prev => prev + 1);
+            }
         }
     }
 
@@ -244,101 +274,139 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
 
         openContractsRef.current.delete(contractId);
         
-        const config = configRef.current;
-        const isWin = contract.status === 'won';
-        
-        const currentStake = contractInfo.stake;
-        let nextStake = config ? config.initialStake : 1;
+        const { botType, signalBotId } = contractInfo;
 
-        if (isWin) {
-            consecutiveLossesRef.current = 0;
-            setTotalWins(prev => prev + 1);
-        } else {
-            consecutiveLossesRef.current += 1;
-            if (config?.useMartingale && config.martingaleFactor) {
-                nextStake = currentStake * config.martingaleFactor;
-            }
-            setTotalLosses(prev => prev + 1);
-        }
-        currentStakeRef.current = nextStake;
-        
-        const profit = contract.profit;
-        totalProfitRef.current += profit;
-        setTotalProfit(totalProfitRef.current);
-        
-        const entryTick = contract.entry_tick;
-        const entryDigit = entryTick ? extractLastDigit(entryTick, contract.underlying) : undefined;
-        const exitTick = contract.exit_tick;
-        const exitDigit = exitTick ? extractLastDigit(exitTick, contract.underlying) : undefined;
-        
-        setTrades(prevTrades => {
-            const newTrades = [...prevTrades];
-            const tradeIndex = newTrades.findIndex(t => t.id === contractId);
-            if (tradeIndex !== -1) {
-                newTrades[tradeIndex] = {
-                    ...newTrades[tradeIndex],
-                    payout: contract.payout,
-                    isWin,
-                    entryDigit,
-                    exitTick,
-                    exitDigit
-                };
-            }
-            return newTrades;
-        });
+        if(botType === 'speed'){
+            const config = configRef.current;
+            const isWin = contract.status === 'won';
+            
+            const currentStake = contractInfo.stake;
+            let nextStake = config ? config.initialStake : 1;
 
-        // --- Stop/Continue Logic ---
-        if (config?.useBulkTrading) {
-            bulkTradesCompletedRef.current += 1;
-        }
-
-        let shouldStop = false;
-        let stopReason: 'tp' | 'sl' | null = null;
-        
-        if (config?.takeProfit && totalProfitRef.current >= config.takeProfit) {
-            toast({ title: "Take-Profit Hit", description: "Bot stopped due to take-profit limit." });
-            shouldStop = true;
-            stopReason = 'tp';
-        } else if (config?.stopLossType === 'amount' && config.stopLossAmount && totalProfitRef.current <= -config.stopLossAmount) {
-            toast({ title: "Stop-Loss Hit", description: "Bot stopped due to stop-loss amount limit." });
-            shouldStop = true;
-            stopReason = 'sl';
-        } else if (config?.stopLossType === 'consecutive_losses' && config.stopLossConsecutive && consecutiveLossesRef.current >= config.stopLossConsecutive) {
-            toast({ title: "Stop-Loss Hit", description: `Bot stopped after ${config.stopLossConsecutive} consecutive losses.` });
-            shouldStop = true;
-            stopReason = 'sl';
-        } else if (config?.useBulkTrading && bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
-             if (openContractsRef.current.size === 0) {
-                toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
-                shouldStop = true;
-            }
-        }
-
-
-        if (shouldStop) {
-            if (stopReason) playSound(stopReason);
-            stopBot(false);
-            return;
-        }
-
-        if (isRunningRef.current) {
-            // For bulk trading, a new contract is purchased only if we haven't reached the total count yet.
-            if (config?.useBulkTrading) {
-                // If we started with N concurrent trades, we only need to buy a new one for each one that closes.
-                if (bulkTradesCompletedRef.current < (config.bulkTradeCount || 1)) {
-                    purchaseContract();
-                }
+            if (isWin) {
+                consecutiveLossesRef.current = 0;
+                setTotalWins(prev => prev + 1);
             } else {
-                // For non-bulk trading, always purchase the next contract.
-                purchaseContract();
+                consecutiveLossesRef.current += 1;
+                if (config?.useMartingale && config.martingaleFactor) {
+                    nextStake = currentStake * config.martingaleFactor;
+                }
+                setTotalLosses(prev => prev + 1);
             }
+            currentStakeRef.current = nextStake;
+            
+            const profit = contract.profit;
+            totalProfitRef.current += profit;
+            setTotalProfit(totalProfitRef.current);
+            
+            const entryTick = contract.entry_tick;
+            const entryDigit = entryTick ? extractLastDigit(entryTick, contract.underlying) : undefined;
+            const exitTick = contract.exit_tick;
+            const exitDigit = exitTick ? extractLastDigit(exitTick, contract.underlying) : undefined;
+            
+            setTrades(prevTrades => {
+                const newTrades = [...prevTrades];
+                const tradeIndex = newTrades.findIndex(t => t.id === contractId);
+                if (tradeIndex !== -1) {
+                    newTrades[tradeIndex] = {
+                        ...newTrades[tradeIndex],
+                        payout: contract.payout,
+                        isWin,
+                        entryDigit,
+                        exitTick,
+                        exitDigit
+                    };
+                }
+                return newTrades;
+            });
+
+            // --- Stop/Continue Logic ---
+            if (config?.useBulkTrading) {
+                bulkTradesCompletedRef.current += 1;
+            }
+
+            let shouldStop = false;
+            let stopReason: 'tp' | 'sl' | null = null;
+            
+            if (config?.takeProfit && totalProfitRef.current >= config.takeProfit) {
+                toast({ title: "Take-Profit Hit", description: "SpeedBot stopped due to take-profit limit." });
+                shouldStop = true;
+                stopReason = 'tp';
+            } else if (config?.stopLossType === 'amount' && config.stopLossAmount && totalProfitRef.current <= -config.stopLossAmount) {
+                toast({ title: "Stop-Loss Hit", description: "SpeedBot stopped due to stop-loss amount limit." });
+                shouldStop = true;
+                stopReason = 'sl';
+            } else if (config?.stopLossType === 'consecutive_losses' && config.stopLossConsecutive && consecutiveLossesRef.current >= config.stopLossConsecutive) {
+                toast({ title: "Stop-Loss Hit", description: `SpeedBot stopped after ${config.stopLossConsecutive} consecutive losses.` });
+                shouldStop = true;
+                stopReason = 'sl';
+            } else if (config?.useBulkTrading && bulkTradesCompletedRef.current >= (config.bulkTradeCount || 1)) {
+                 if ([...openContractsRef.current.values()].filter(c => c.botType === 'speed').length === 0) {
+                    toast({ title: 'Bulk Trades Complete', description: `Finished ${config.bulkTradeCount} trades.`});
+                    shouldStop = true;
+                }
+            }
+
+            if (shouldStop) {
+                if (stopReason) playSound(stopReason);
+                stopBot(false);
+                return;
+            }
+
+            if (isRunningRef.current) {
+                purchaseContract('speed', config, currentStakeRef.current);
+            }
+        } else if (botType === 'signal' && signalBotId) {
+             setSignalBots(prevBots => prevBots.map(bot => {
+                if(bot.id === signalBotId){
+                    const newProfit = bot.profit + contract.profit;
+                    const isWin = contract.status === 'won';
+                    let nextStake = bot.config.initialStake;
+                    let consecutiveLosses = bot.consecutiveLosses || 0;
+                    
+                    if (isWin) {
+                        consecutiveLosses = 0;
+                    } else {
+                        consecutiveLosses++;
+                        if(bot.config.useMartingale && bot.config.martingaleFactor){
+                           nextStake = contractInfo.stake * bot.config.martingaleFactor;
+                        }
+                    }
+
+                    const updatedBot = { ...bot, profit: newProfit, consecutiveLosses };
+
+                    // Check stop conditions for this specific signal bot
+                    if (updatedBot.config.takeProfit && updatedBot.profit >= updatedBot.config.takeProfit) {
+                        toast({ title: "Take-Profit Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
+                        return { ...updatedBot, status: 'stopped' };
+                    }
+                    if (updatedBot.config.stopLossType === 'amount' && updatedBot.config.stopLossAmount && updatedBot.profit <= -updatedBot.config.stopLossAmount) {
+                        toast({ title: "Stop-Loss Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
+                        return { ...updatedBot, status: 'stopped' };
+                    }
+                     if (updatedBot.config.stopLossType === 'consecutive_losses' && updatedBot.config.stopLossConsecutive && consecutiveLosses >= updatedBot.config.stopLossConsecutive) {
+                         toast({ title: "Stop-Loss Hit", description: `Signal Bot for ${updatedBot.name} stopped.` });
+                         return { ...updatedBot, status: 'stopped' };
+                    }
+
+
+                    // If not stopped, purchase next contract
+                    if (updatedBot.status === 'running') {
+                       purchaseContract('signal', updatedBot.config, nextStake, updatedBot.id);
+                    }
+                    
+                    return updatedBot;
+                }
+                return bot;
+             }));
         }
     }
-  }, [purchaseContract, stopBot, toast, extractLastDigit]);
+  }, [stopBot, toast, extractLastDigit, purchaseContract]);
   
   useEffect(() => {
     if (!isConnected) {
         stopBot(false);
+        setSignalBots(prev => prev.map(b => ({...b, status: 'stopped'})));
         return;
     }
     const unsubscribe = subscribeToMessages(handleMessage);
@@ -361,7 +429,6 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
     configRef.current = config;
     currentStakeRef.current = config.initialStake;
     bulkTradesCompletedRef.current = 0;
-    openContractsRef.current.clear();
     consecutiveLossesRef.current = 0;
     
     isRunningRef.current = true;
@@ -385,13 +452,26 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const tradeCount = config.bulkTradeCount || 1;
         const concurrentTrades = Math.min(tradeCount, 10);
         for (let i = 0; i < concurrentTrades; i++) {
-          purchaseContract();
+          purchaseContract('speed', config, currentStakeRef.current);
         }
       } else {
-        purchaseContract();
+        purchaseContract('speed', config, currentStakeRef.current);
       }
     }
-  }, [api, isConnected, purchaseContract, toast, connectDigit, digitStatus]);
+  }, [api, isConnected, toast, connectDigit, digitStatus, purchaseContract]);
+
+  const startSignalBot = useCallback((newBot: SignalBot) => {
+      setSignalBots(prev => [...prev, newBot]);
+      purchaseContract('signal', newBot.config, newBot.config.initialStake, newBot.id);
+      setActiveTab('bot-builder');
+      setActiveBuilderTab('signalbot');
+  }, [purchaseContract, setActiveTab, setActiveBuilderTab]);
+
+  const stopSignalBot = useCallback((id: string) => {
+      setSignalBots(prev => prev.map(bot => bot.id === id ? { ...bot, status: 'stopped' } : bot));
+      toast({ title: 'Signal Bot Stopped', description: `The bot with ID ${id} has been manually stopped.`})
+  }, [toast]);
+
 
   useEffect(() => {
     if (!waitingForEntryRef.current || !isRunningRef.current || !configRef.current?.useEntryPoint) return;
@@ -428,10 +508,10 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
         const tradeCount = config.bulkTradeCount || 1;
         const concurrentTrades = Math.min(tradeCount, 10);
         for (let i = 0; i < concurrentTrades; i++) {
-          purchaseContract();
+          purchaseContract('speed', config, currentStakeRef.current);
         }
       } else {
-        purchaseContract();
+        purchaseContract('speed', config, currentStakeRef.current);
       }
     }
   }, [lastDigits, purchaseContract, digitStatus, disconnectDigit]);
@@ -453,11 +533,14 @@ export const BotProvider = ({ children }: { children: ReactNode }) => {
       resetStats,
       form,
       setForm,
+      tradeLogRef,
+      signalBots,
+      startSignalBot,
+      stopSignalBot,
       activeTab,
       setActiveTab,
       activeBuilderTab,
       setActiveBuilderTab,
-      tradeLogRef,
     }}>
       {children}
     </BotContext.Provider>

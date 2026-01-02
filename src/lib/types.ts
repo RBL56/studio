@@ -1,3 +1,6 @@
+
+import { BotConfigurationValues } from "@/components/bot-builder/bot-configuration-form";
+
 export type Strategy = {
     name: string;
     description: string;
@@ -15,3 +18,14 @@ export type Trade = {
     exitTick?: number;
     exitDigit?: number;
 };
+
+export interface SignalBot {
+    id: string;
+    name: string;
+    market: string;
+    signalType: string;
+    status: 'running' | 'stopped';
+    profit: number;
+    config: BotConfigurationValues;
+    consecutiveLosses?: number;
+}

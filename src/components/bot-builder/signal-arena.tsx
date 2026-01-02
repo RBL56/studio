@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
+import type { SignalBot } from '@/lib/types';
+
 
 // --- Sound Utility ---
 const playSound = (text: string) => {
@@ -139,9 +141,9 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 };
 // --- End of Analysis Logic ---
 
-const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
+const SignalArena = () => {
     const { api, isConnected, subscribeToMessages, marketConfig } = useDerivApi();
-    const { activeTab, startBot } = useBot();
+    const { startSignalBot, setActiveTab, setActiveBuilderTab } = useBot();
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
@@ -193,51 +195,62 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         setDisplayedCards(filteredData);
     }, [activeFilter, FILTERS]);
 
-    const runBotFromSignal = (signal: any) => {
+    const runBotFromSignal = (signal: any, manualStart: boolean = false) => {
         const direction = signal.strong_signal_type.includes('Over') ? 'over' : 'under';
         const prediction = signal.strong_signal_type.includes('Over') ? 3 : 6;
-        
-        startBot({
+
+        const botConfig: SignalBot = {
+            id: `${signal.symbol}-${Date.now()}`,
+            name: signal.name,
             market: signal.symbol,
-            tradeType: 'over_under',
-            predictionType: direction,
-            lastDigitPrediction: prediction,
-            initialStake: 1.00,
-            ticks: 1,
-            takeProfit: 10,
-            stopLossType: 'amount',
-            stopLossAmount: 50,
-            useMartingale: true,
-            martingaleFactor: 2.1,
-            useBulkTrading: false,
-            useEntryPoint: false,
-        });
-    };
-
-    const runAnalysis = useCallback((symbol: string) => {
-        const digits = tickDataRef.current[symbol];
-        if (digits && digits.length >= 100) {
-            const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol]?.name || symbol);
-            if (result) {
-                const previousResult = analysisDataRef.current[symbol];
-                if (result.strong_signal && (!previousResult || !previousResult.strong_signal)) {
-                    if (!strongSignalNotified.current.has(symbol)) {
-                        const message = `${result.name}, ${result.strong_signal_type}`;
-                        playSound(message);
-                        strongSignalNotified.current.add(symbol);
-
-                        if (activeTab !== 'signal-arena' && activeTab !== 'trading-view') {
-                           setSignalAlert(result);
-                        }
-                    }
-                } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
-                    strongSignalNotified.current.delete(symbol);
-                }
-                analysisDataRef.current[symbol] = result;
-                setUpdateTime(new Date().toLocaleTimeString());
+            signalType: signal.strong_signal_type,
+            status: 'running',
+            profit: 0,
+            config: {
+                market: signal.symbol,
+                tradeType: 'over_under',
+                predictionType: direction,
+                lastDigitPrediction: prediction,
+                initialStake: 1.00,
+                ticks: 1,
+                takeProfit: 10,
+                stopLossType: 'amount',
+                stopLossAmount: 50,
+                useMartingale: true,
+                martingaleFactor: 2.1,
             }
         }
-    }, [activeTab]);
+        
+        startSignalBot(botConfig);
+        if (manualStart) {
+            setActiveTab('bot-builder');
+            setActiveBuilderTab('signalbot');
+        }
+    };
+
+    const runAnalysis = useCallback(() => {
+        Object.keys(tickDataRef.current).forEach(symbol => {
+            const digits = tickDataRef.current[symbol];
+            if (digits && digits.length >= 100) {
+                const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol]?.name || symbol);
+                if (result) {
+                    const previousResult = analysisDataRef.current[symbol];
+                    if (result.strong_signal && (!previousResult || !previousResult.strong_signal)) {
+                        if (!strongSignalNotified.current.has(symbol)) {
+                            const message = `${result.name}, ${result.strong_signal_type}`;
+                            playSound(message);
+                            strongSignalNotified.current.add(symbol);
+                            setSignalAlert(result);
+                        }
+                    } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
+                        strongSignalNotified.current.delete(symbol);
+                    }
+                    analysisDataRef.current[symbol] = result;
+                }
+            }
+        });
+        setUpdateTime(new Date().toLocaleTimeString());
+    }, []);
 
 
     const handleMessage = useCallback((data: any) => {
@@ -251,31 +264,28 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         if (data.msg_type === 'history') {
             const symbol = data.echo_req.ticks_history;
             const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
-            tickDataRef.current[symbol] = newDigits;
+            tickDataRef.current[symbol] = (tickDataRef.current[symbol] || []).concat(newDigits);
 
-            if (api && api.readyState === WebSocket.OPEN) {
+            if (api && api.readyState === WebSocket.OPEN && !subscribedSymbols.current.has(symbol)) {
                 api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+                subscribedSymbols.current.add(symbol);
             }
-            runAnalysis(symbol);
         }
 
         if (data.msg_type === 'tick') {
             const tick = data.tick;
             const symbol = tick.symbol;
-            if (subscribedSymbols.current.has(symbol)) {
-                const newDigit = extractLastDigit(parseFloat(tick.quote), symbol);
-                const existingTicks = tickDataRef.current[symbol] || [];
-                const updatedTicks = [...existingTicks, newDigit];
-                if (updatedTicks.length > 500) {
-                    updatedTicks.shift();
-                }
-                tickDataRef.current[symbol] = updatedTicks;
-                runAnalysis(symbol);
+            const newDigit = extractLastDigit(parseFloat(tick.quote), symbol);
+            const existingTicks = tickDataRef.current[symbol] || [];
+            const updatedTicks = [...existingTicks, newDigit];
+            if (updatedTicks.length > 500) {
+                updatedTicks.shift();
             }
+            tickDataRef.current[symbol] = updatedTicks;
         }
-    }, [extractLastDigit, api, runAnalysis]);
+    }, [extractLastDigit, api]);
 
-    const manageSubscriptions = useCallback((shouldSubscribe: boolean) => {
+    const manageSubscriptions = useCallback(() => {
         if (!api || !isConnected) return;
     
         const symbols = Object.keys(SYMBOL_CONFIG);
@@ -283,51 +293,44 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         const subscribeWithDelay = (index: number) => {
             if (index >= symbols.length) return;
             const symbol = symbols[index];
-            if (!subscribedSymbols.current.has(symbol) && api.readyState === WebSocket.OPEN) {
+            if (api.readyState === WebSocket.OPEN) {
                 api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
-                subscribedSymbols.current.add(symbol);
             }
             setTimeout(() => subscribeWithDelay(index + 1), 200); // 200ms delay between subscriptions
         };
 
-        if (shouldSubscribe) {
-            setApiStatus('Connected');
-            subscribeWithDelay(0);
-        } else {
-             setApiStatus('Paused');
-             symbols.forEach(symbol => {
-                 if (subscribedSymbols.current.has(symbol)) {
-                    if (api.readyState === WebSocket.OPEN) {
-                        try {
-                            api.send(JSON.stringify({ forget_all: 'ticks' }));
-                        } catch (e) {
-                            console.error("Error forgetting subscription", e);
-                        }
-                    }
-                    subscribedSymbols.current.clear();
-                 }
-             });
-        }
+        setApiStatus('Connected');
+        subscribeWithDelay(0);
+        
     }, [api, isConnected]);
 
     useEffect(() => {
         if (isConnected) {
-            manageSubscriptions(true);
+            manageSubscriptions();
             const unsubscribe = subscribeToMessages(handleMessage);
+
+            const analysisInterval = setInterval(runAnalysis, 1000);
+            const uiInterval = setInterval(filterAndSortData, 1000);
+
             return () => {
                 unsubscribe();
-                manageSubscriptions(false);
+                clearInterval(analysisInterval);
+                clearInterval(uiInterval);
+                if (api && api.readyState === WebSocket.OPEN) {
+                    try {
+                        api.send(JSON.stringify({ forget_all: 'ticks' }));
+                    } catch (e) {
+                        console.error("Error forgetting subscriptions", e);
+                    }
+                }
+                subscribedSymbols.current.clear();
             };
         } else {
-             manageSubscriptions(false);
+             setApiStatus('Disconnected');
         }
-    }, [isConnected, manageSubscriptions, handleMessage, subscribeToMessages]);
+    }, [isConnected, manageSubscriptions, handleMessage, subscribeToMessages, runAnalysis, filterAndSortData, api]);
     
-    useEffect(() => {
-        filterAndSortData();
-    }, [activeFilter, updateTime, filterAndSortData]);
-
-
+    
     const renderCard = (card: any) => {
         if (!card) return null;
         const confidenceClass = card.confidence >= 70 ? 'confidence-high' : card.confidence >= 40 ? 'confidence-medium' : 'confidence-low';
@@ -368,8 +371,8 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
                 <div className="signal-card-footer">
                     <div className="signal-hot-digits"><span>🔥 Hot Digits:</span><span>{card.hot_digits.length > 0 ? card.hot_digits.join(', ') : 'None'}</span></div>
                     <div className="signal-bot-buttons">
-                        <button className="signal-bot-btn signal-bot-over" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Over 3'})}><Bot className="h-4 w-4" /> OVER</button>
-                        <button className="signal-bot-btn signal-bot-under" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Under 6'})}><Bot className="h-4 w-4" /> UNDER</button>
+                        <button className="signal-bot-btn signal-bot-over" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Over 3'}, true)}><Bot className="h-4 w-4" /> OVER</button>
+                        <button className="signal-bot-btn signal-bot-under" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Under 6'}, true)}><Bot className="h-4 w-4" /> UNDER</button>
                     </div>
                 </div>
                 <div className="signal-update-time">Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
@@ -378,8 +381,6 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
     }
     
     const renderContent = () => {
-        if (!isVisible) return null;
-
         if (!isConnected) {
             return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Connecting to Deriv API...</p></div>;
         }
@@ -392,7 +393,7 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         );
 
         if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === symbolsInFilter.length) {
-             const loadingSymbolsCount = symbolsInFilter.filter(s => subscribedSymbols.current.has(s) && (tickDataRef.current[s] === undefined || (tickDataRef.current[s]?.length ?? 0) < 100)).length;
+             const loadingSymbolsCount = symbolsInFilter.filter(s => (tickDataRef.current[s] === undefined || (tickDataRef.current[s]?.length ?? 0) < 100)).length;
              if (loadingSymbolsCount > 0) {
                  return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Waiting for live data for {loadingSymbolsCount} market(s)...</p></div>;
              }
@@ -422,30 +423,28 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
 
     const handleStartBotFromAlert = () => {
         if(signalAlert) {
-            runBotFromSignal(signalAlert);
+            runBotFromSignal(signalAlert, true);
         }
         setSignalAlert(null);
     }
 
     return (
         <div className="signal-center-body">
-            {isVisible && (
-                <div className="signal-center-container">
-                    <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
-                    <div className="signal-risk-panel">
-                        <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
-                        <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
-                    </div>
-                    <div className="signal-filters">
-                        {Object.keys(FILTERS).map(filter => (
-                            <button key={filter} className={cn("signal-filter-btn", { 'active': activeFilter === filter })} onClick={() => setActiveFilter(filter)}>
-                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="signal-cards-grid">{renderContent()}</div>
+            <div className="signal-center-container">
+                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
+                <div className="signal-risk-panel">
+                    <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
+                    <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
                 </div>
-            )}
+                <div className="signal-filters">
+                    {Object.keys(FILTERS).map(filter => (
+                        <button key={filter} className={cn("signal-filter-btn", { 'active': activeFilter === filter })} onClick={() => setActiveFilter(filter)}>
+                            {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                        </button>
+                    ))}
+                </div>
+                <div className="signal-cards-grid">{renderContent()}</div>
+            </div>
 
             <AlertDialog open={!!signalAlert} onOpenChange={() => setSignalAlert(null)}>
                 <AlertDialogContent>

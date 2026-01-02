@@ -14,8 +14,9 @@ import TradeLog from '@/components/bot-builder/trade-log';
 import QuickTradePanel from '@/components/bot-builder/quick-trade-panel';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
 import { cn } from '@/lib/utils';
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import SignalArena from '@/components/bot-builder/signal-arena';
+import SignalBotDashboard from '@/components/bot-builder/signal-bot-dashboard';
 
 function BotBuilderContent() {
   const { isConnected } = useDerivApi();
@@ -45,7 +46,18 @@ function BotBuilderContent() {
     <div className={cn("py-4 md:py-8")}>
         {isConnected ? (
           <Tabs value={activeTab} className="w-full md:grid md:grid-cols-[250px_1fr] gap-8" onValueChange={handleTabChange}>
-              <div className="px-4 md:px-0">
+              <div className="px-4 md:hidden">
+                  <ScrollArea className="w-full whitespace-nowrap pb-2">
+                      <TabsList className="inline-flex w-full mb-4">
+                          <TabsTrigger value="bot-builder" className="py-3 text-base w-full justify-start" onClick={() => handleTabChange('bot-builder')}><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
+                          <TabsTrigger value="dcircle" className="py-3 text-base w-full justify-start" onClick={() => handleTabChange('dcircle')}><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
+                          <TabsTrigger value="signal-arena" className="py-3 text-base w-full justify-start" onClick={() => handleTabChange('signal-arena')}><Target className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
+                          <TabsTrigger value="trading-view" className="py-3 text-base w-full justify-start" onClick={() => handleTabChange('trading-view')}><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
+                      </TabsList>
+                  </ScrollArea>
+              </div>
+
+              <div className="px-4 md:px-0 hidden md:block">
                  <ScrollArea className="w-full whitespace-nowrap pb-2 md:pb-0">
                     <TabsList className="inline-flex w-full mb-4 md:flex-col md:h-auto md:w-auto">
                         <TabsTrigger value="bot-builder" className="py-3 text-base w-full justify-start"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
@@ -77,14 +89,7 @@ function BotBuilderContent() {
                             </div>
                         </TabsContent>
                         <TabsContent value="signalbot">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Under Development</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p>This feature is currently under development and will be available soon.</p>
-                                </CardContent>
-                            </Card>
+                           <SignalBotDashboard />
                         </TabsContent>
                     </Tabs>
                 </TabsContent>
@@ -99,7 +104,7 @@ function BotBuilderContent() {
                 </TabsContent>
 
                 <TabsContent value="signal-arena">
-                  <SignalArena isVisible={activeTab === 'signal-arena'} />
+                  <SignalArena />
                 </TabsContent>
 
                 <TabsContent value="trading-view" className="mt-0 px-4 md:px-0">
