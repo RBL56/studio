@@ -150,7 +150,7 @@ const SignalArena = () => {
         }
         filteredData.sort((a, b) => (b?.confidence ?? 0) - (a?.confidence ?? 0));
         setDisplayedCards(filteredData);
-    }, [activeFilter, analysisData, FILTERS]);
+    }, [activeFilter, analysisData]);
 
     const handleMessage = useCallback((data: any) => {
         if (data.error) {
@@ -213,21 +213,24 @@ const SignalArena = () => {
     }, [handleMessage, subscribeToMessages]);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            const updatedAnalysis: { [key: string]: any } = {};
-            for (const symbol of subscribedSymbols.current) {
+        const updatedAnalysis: { [key: string]: any } = {};
+        let needsUpdate = false;
+        for (const symbol in tickData) {
+            if (Object.prototype.hasOwnProperty.call(tickData, symbol)) {
                 const digits = tickData[symbol];
                 if (digits && digits.length >= 100) {
                     const result = analyzeDigits(digits, symbol, SYMBOL_CONFIG[symbol]?.name || symbol);
-                    if (result) updatedAnalysis[symbol] = result;
+                    if (result) {
+                        updatedAnalysis[symbol] = result;
+                        needsUpdate = true;
+                    }
                 }
             }
-            if (Object.keys(updatedAnalysis).length > 0) {
-                 setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
-            }
-            setUpdateTime(new Date().toLocaleTimeString());
-        }, 1000);
-        return () => clearInterval(interval);
+        }
+        if (needsUpdate) {
+             setAnalysisData(prev => ({ ...prev, ...updatedAnalysis }));
+             setUpdateTime(new Date().toLocaleTimeString());
+        }
     }, [tickData]);
     
     useEffect(() => {
@@ -353,3 +356,4 @@ export default SignalArena;
     
 
     
+
