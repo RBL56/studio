@@ -17,7 +17,7 @@ export function OverUnderAnalysis() {
     const { over, under, equal, overCount, underCount, equalCount } = getOverUnder(barrier);
     const total = overCount + underCount + equalCount;
     
-    const barriers = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    const barriers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     const displayedDigits = showAll ? lastDigits : lastDigits.slice(-50);
 
