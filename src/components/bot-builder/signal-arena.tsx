@@ -109,6 +109,7 @@ const analyzeDigits = (digits: number[], symbol: string, name: string) => {
         ticks_analyzed: total,
         update_time: new Date().toISOString(),
         strong_signal: percentages.over_3 >= 66 || percentages.under_6 >= 66,
+        reasons,
     };
 };
 
@@ -303,7 +304,7 @@ const SignalArena = () => {
                     <div className="signal-signal-item"><div className="signal-signal-label">Odd</div><div className={cn("signal-signal-value", getSignalClass(card.percentages.odd, 'even_odd'))}>{card.percentages.odd.toFixed(1)}%</div></div>
                 </div>
                 <div className="signal-stats-row"><div className="signal-chi-square">χ²: {card.chi_square.chi2.toFixed(2)}, p: {card.chi_square.pValue.toFixed(3)}</div><div className={cn("signal-bias-indicator", biasClass)}>{card.chi_square.interpretation}</div></div>
-                {card.reasons.length > 0 && <div className="signal-reasons">{card.reasons.map((reason: string) => <span key={reason} className="signal-reason-tag">{reason}</span>)}</div>}
+                {card.reasons && card.reasons.length > 0 && <div className="signal-reasons">{card.reasons.map((reason: string) => <span key={reason} className="signal-reason-tag">{reason}</span>)}</div>}
                 <div className="signal-digits-table">
                     {Array.from({ length: 10 }).map((_, i) => (
                         <div key={i} className={cn("signal-digit-cell", getDigitClass(card.percentages[`digit_${i}`]), i === 0 ? 'digit-zero' : '')}>
@@ -389,6 +390,7 @@ export default SignalArena;
     
 
     
+
 
 
 
