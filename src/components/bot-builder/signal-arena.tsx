@@ -279,28 +279,32 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         if (!api || !isConnected) return;
     
         const symbols = Object.keys(SYMBOL_CONFIG);
+        
+        const subscribeWithDelay = (index: number) => {
+            if (index >= symbols.length) return;
+            const symbol = symbols[index];
+            if (!subscribedSymbols.current.has(symbol) && api.readyState === WebSocket.OPEN) {
+                api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
+                subscribedSymbols.current.add(symbol);
+            }
+            setTimeout(() => subscribeWithDelay(index + 1), 200); // 200ms delay between subscriptions
+        };
+
         if (shouldSubscribe) {
             setApiStatus('Connected');
-            symbols.forEach(symbol => {
-                if (!subscribedSymbols.current.has(symbol)) {
-                    if (api.readyState === WebSocket.OPEN) {
-                        api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
-                        subscribedSymbols.current.add(symbol);
-                    }
-                }
-            });
+            subscribeWithDelay(0);
         } else {
              setApiStatus('Paused');
              symbols.forEach(symbol => {
                  if (subscribedSymbols.current.has(symbol)) {
                     if (api.readyState === WebSocket.OPEN) {
                         try {
-                            api.send(JSON.stringify({ forget: symbol }));
+                            api.send(JSON.stringify({ forget_all: 'ticks' }));
                         } catch (e) {
                             console.error("Error forgetting subscription", e);
                         }
                     }
-                    subscribedSymbols.current.delete(symbol);
+                    subscribedSymbols.current.clear();
                  }
              });
         }
