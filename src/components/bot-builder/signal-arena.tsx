@@ -157,18 +157,27 @@ const SignalArena = () => {
 
     const filterAndSortData = useCallback(() => {
         let filteredData = Object.values(analysisDataRef.current).filter(d => d !== null);
-        if (activeFilter !== 'all') {
+
+        // Filtering
+        if (activeFilter !== 'all' && activeFilter !== 'over3' && activeFilter !== 'under6') {
             filteredData = filteredData.filter(d => {
                 if (!d) return false;
                 if (activeFilter === 'strong') return d.strong_signal;
-                if (activeFilter === 'over3') return d.percentages.over_3 >= 66;
-                if (activeFilter === 'under6') return d.percentages.under_6 >= 66;
                 if (activeFilter === 'volatility') return SYMBOL_CONFIG[d.symbol]?.type === 'volatility';
                 if (activeFilter === 'jump') return SYMBOL_CONFIG[d.symbol]?.type === 'jump';
                 return true;
             });
         }
-        filteredData.sort((a, b) => (b?.confidence ?? 0) - (a?.confidence ?? 0));
+        
+        // Sorting
+        if (activeFilter === 'over3') {
+            filteredData.sort((a, b) => (b?.percentages.over_3 ?? 0) - (a?.percentages.over_3 ?? 0));
+        } else if (activeFilter === 'under6') {
+            filteredData.sort((a, b) => (b?.percentages.under_6 ?? 0) - (a?.percentages.under_6 ?? 0));
+        } else {
+            filteredData.sort((a, b) => (b?.confidence ?? 0) - (a?.confidence ?? 0));
+        }
+        
         setDisplayedCards(filteredData);
     }, [activeFilter]);
 
@@ -312,7 +321,7 @@ const SignalArena = () => {
         }
 
         const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS] || Object.keys(SYMBOL_CONFIG);
-        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol));
+        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol) || activeFilter === 'all' || activeFilter === 'over3' || activeFilter === 'under6');
         const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
             !analysisDataRef.current[symbol] || (tickDataRef.current[symbol]?.length || 0) < 100
         );
