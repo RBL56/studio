@@ -28,7 +28,8 @@ export function DigitAnalysisTool() {
         marketConfig,
         ticksToFetch,
         setTicksToFetch,
-        maxTicks
+        maxTicks,
+        setOverUnderBarrier,
     } = useDigitAnalysis();
 
     return (
@@ -124,7 +125,11 @@ export function DigitAnalysisTool() {
 
 
                         return (
-                            <div key={i} className={`digit-box ${boxClass}`}>
+                            <div 
+                                key={i} 
+                                className={`digit-box cursor-pointer ${boxClass}`}
+                                onClick={() => setOverUnderBarrier(i)}
+                            >
                                 <div className="digit">{i}</div>
                                 <div className="percentage">{stat.percentage}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'hsl(var(--muted-foreground))' }}>{stat.count}</div>

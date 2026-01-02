@@ -46,6 +46,10 @@ interface DigitAnalysisContextType {
     maxTicks: number;
     lastDigits: number[];
     getOverUnder: (barrier: number) => { over: string; under: string; equal: string; overCount: number; underCount: number; equalCount: number };
+    overUnderBarrier: number;
+    setOverUnderBarrier: (barrier: number) => void;
+    showAllOverUnder: boolean;
+    setShowAllOverUnder: (show: boolean) => void;
 }
 
 type Tick = {
@@ -71,6 +75,8 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const [tickHistory, setTickHistory] = useState<Tick[]>([]);
     const [activeDigit, setActiveDigit] = useState<number | null>(null);
     const [lastDigits, setLastDigits] = useState<number[]>([]);
+    const [overUnderBarrier, setOverUnderBarrier] = useState(5);
+    const [showAllOverUnder, setShowAllOverUnder] = useState(false);
 
     const ws = useRef<WebSocket | null>(null);
     const subscriptionId = useRef<string | null>(null);
@@ -358,6 +364,10 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         maxTicks: MAX_TICKS_API_LIMIT,
         lastDigits,
         getOverUnder,
+        overUnderBarrier,
+        setOverUnderBarrier,
+        showAllOverUnder,
+        setShowAllOverUnder,
     };
 
     return (

@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useDigitAnalysis } from '@/context/digit-analysis-context';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -10,16 +10,13 @@ import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 
 export function OverUnderAnalysis() {
-    const { getOverUnder, lastDigits } = useDigitAnalysis();
-    const [barrier, setBarrier] = useState(5);
-    const [showAll, setShowAll] = useState(false);
+    const { getOverUnder, lastDigits, overUnderBarrier, setOverUnderBarrier, showAllOverUnder, setShowAllOverUnder } = useDigitAnalysis();
 
-    const { over, under, equal, overCount, underCount, equalCount } = getOverUnder(barrier);
-    const total = overCount + underCount + equalCount;
+    const { over, under, equal } = getOverUnder(overUnderBarrier);
     
     const barriers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-    const displayedDigits = showAll ? lastDigits : lastDigits.slice(-50);
+    const displayedDigits = showAllOverUnder ? lastDigits : lastDigits.slice(-50);
 
     return (
         <Card className="mt-4">
@@ -29,7 +26,7 @@ export function OverUnderAnalysis() {
             <CardContent>
                 <div className="flex items-center gap-4 mb-4">
                     <label className="text-sm font-medium">OVER/UNDER:</label>
-                    <Select value={barrier.toString()} onValueChange={(val) => setBarrier(Number(val))}>
+                    <Select value={overUnderBarrier.toString()} onValueChange={(val) => setOverUnderBarrier(Number(val))}>
                         <SelectTrigger className="w-24">
                             <SelectValue />
                         </SelectTrigger>
@@ -72,16 +69,16 @@ export function OverUnderAnalysis() {
                 <div className="flex justify-between items-center mb-2">
                     <h3 className="text-lg font-semibold">Recent Digits</h3>
                     {lastDigits.length > 50 && (
-                        <Button variant="link" onClick={() => setShowAll(!showAll)}>
-                            {showAll ? 'Less' : `More (${lastDigits.length - 50})`}
+                        <Button variant="link" onClick={() => setShowAllOverUnder(!showAllOverUnder)}>
+                            {showAllOverUnder ? 'Less' : `More (${lastDigits.length - 50})`}
                         </Button>
                     )}
                 </div>
                 <div className="grid grid-cols-10 gap-2 mb-4">
                     {displayedDigits.map((digit, index) => {
                         let status;
-                        if (digit < barrier) status = 'under';
-                        else if (digit > barrier) status = 'over';
+                        if (digit < overUnderBarrier) status = 'under';
+                        else if (digit > overUnderBarrier) status = 'over';
                         else status = 'equal';
                         
                         return (

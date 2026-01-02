@@ -268,12 +268,14 @@ const SignalArena = () => {
 
         if (data.msg_type === 'history') {
             const symbol = data.echo_req.ticks_history;
-            const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
-            tickDataRef.current[symbol] = (tickDataRef.current[symbol] || []).concat(newDigits);
+            if(!subscribedSymbols.current.has(symbol)) {
+                const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
+                tickDataRef.current[symbol] = (tickDataRef.current[symbol] || []).concat(newDigits);
 
-            if (api && api.readyState === WebSocket.OPEN && !subscribedSymbols.current.has(symbol)) {
-                api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-                subscribedSymbols.current.add(symbol);
+                if (api && api.readyState === WebSocket.OPEN) {
+                    api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+                    subscribedSymbols.current.add(symbol);
+                }
             }
         }
 
@@ -442,7 +444,7 @@ const SignalArena = () => {
     return (
         <div className="signal-center-body">
             <div className="signal-center-container">
-                <div className="signal-center-header"><h1><span>🎯</span> LOCO Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
+                <div className="signal-center-header"><h1><span>🎯</span> LOCO SIGNAL CENTER</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
                 <SignalBotConfigPanel />
                 <div className="signal-filters">
                     {Object.keys(FILTERS).map(filter => (
