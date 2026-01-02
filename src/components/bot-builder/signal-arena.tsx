@@ -114,7 +114,6 @@ const SignalArena = () => {
     const [analysisData, setAnalysisData] = useState<{ [key: string]: any }>({});
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
-    const [tickCount, setTickCount] = useState(0);
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
     
     const subscribedSymbols = useRef(new Set<string>());
@@ -172,7 +171,6 @@ const SignalArena = () => {
         }
 
         if (data.msg_type === 'tick') {
-            setTickCount(prev => prev + 1);
             const tick = data.tick;
             const symbol = tick.symbol;
             if (subscribedSymbols.current.has(symbol)) {
@@ -335,7 +333,7 @@ const SignalArena = () => {
     return (
         <div className="signal-center-body">
             <div className="signal-center-container">
-                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Ticks Processed: {tickCount}</span><span>Last Update: {updateTime}</span></div></div>
+                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
                 <div className="signal-risk-panel">
                     <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
                     <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
@@ -358,5 +356,6 @@ export default SignalArena;
     
 
     
+
 
 
