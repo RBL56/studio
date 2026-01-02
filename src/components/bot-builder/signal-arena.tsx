@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { cn } from '@/lib/utils';
 import { Bot } from 'lucide-react';
+import { useBot } from '@/context/bot-context';
 
 // --- Sound Utility ---
 const playSound = (text: string) => {
@@ -129,6 +130,7 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 
 const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
     const { api, isConnected, subscribeToMessages, marketConfig } = useDerivApi();
+    const { activeTab } = useBot();
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
@@ -150,8 +152,8 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
     const FILTERS = React.useMemo(() => ({
         'all': Object.keys(SYMBOL_CONFIG),
         'strong': [],
-        'over3': Object.keys(SYMBOL_CONFIG),
-        'under6': Object.keys(SYMBOL_CONFIG),
+        'over3': [],
+        'under6': [],
         'volatility': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'volatility'),
         'jump': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'jump'),
     }), []);
@@ -159,9 +161,8 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
     const filterAndSortData = useCallback(() => {
         let filteredData = Object.values(analysisDataRef.current).filter(d => d !== null);
 
-        // Filtering
         const filterSymbols = FILTERS[activeFilter as keyof typeof FILTERS];
-        if (filterSymbols) {
+        if (filterSymbols && filterSymbols.length > 0) {
           filteredData = filteredData.filter(d => filterSymbols.includes(d.symbol));
         }
 
@@ -169,7 +170,6 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
           filteredData = filteredData.filter(d => d.strong_signal);
         }
         
-        // Sorting
         if (activeFilter === 'over3') {
             filteredData.sort((a, b) => (b?.percentages.over_3 ?? 0) - (a?.percentages.over_3 ?? 0));
         } else if (activeFilter === 'under6') {
@@ -181,6 +181,11 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         setDisplayedCards(filteredData);
     }, [activeFilter, FILTERS]);
 
+    const runBot = (symbol: string, direction: string) => {
+        if (!confirm(`Start ${direction.toUpperCase()} bot for ${symbol}?\n\nBase stake: $1.00\nStop loss: $50.00 daily`)) return;
+        alert(`Bot started for ${symbol} (${direction})\n\nRisk management active:\n• $50 daily loss limit\n• 30s cooldown per symbol\n• Max 3 concurrent trades`);
+    };
+
     const runAnalysis = useCallback((symbol: string) => {
         const digits = tickDataRef.current[symbol];
         if (digits && digits.length >= 100) {
@@ -189,8 +194,14 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
                 const previousResult = analysisDataRef.current[symbol];
                 if (result.strong_signal && (!previousResult || !previousResult.strong_signal)) {
                     if (!strongSignalNotified.current.has(symbol)) {
-                         playSound(`${result.name}, ${result.strong_signal_type}`);
+                         const message = `${result.name}, ${result.strong_signal_type}`;
+                         playSound(message);
                         strongSignalNotified.current.add(symbol);
+
+                         if (activeTab !== 'signal-arena' && activeTab !== 'trading-view') {
+                            const direction = result.strong_signal_type.includes('Over') ? 'over' : 'under';
+                            runBot(result.symbol, direction);
+                        }
                     }
                 } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
                     strongSignalNotified.current.delete(symbol);
@@ -199,7 +210,7 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
                 setUpdateTime(new Date().toLocaleTimeString());
             }
         }
-    }, []);
+    }, [activeTab]);
 
 
     const handleMessage = useCallback((data: any) => {
@@ -237,31 +248,43 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         }
     }, [extractLastDigit, api, runAnalysis]);
 
-    useEffect(() => {
-        if (!api || !isConnected) {
-            setApiStatus('Disconnected');
-            return;
-        };
-
-        setApiStatus('Connected');
+    const manageSubscriptions = useCallback((shouldSubscribe: boolean) => {
+        if (!api || !isConnected) return;
     
-        const symbolsToSubscribe = Object.keys(SYMBOL_CONFIG);
-    
-        symbolsToSubscribe.forEach(symbol => {
-            if (!subscribedSymbols.current.has(symbol)) {
-                if (api && api.readyState === WebSocket.OPEN) {
-                    api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
-                    subscribedSymbols.current.add(symbol);
+        const symbols = Object.keys(SYMBOL_CONFIG);
+        if (shouldSubscribe) {
+            setApiStatus('Connected');
+            symbols.forEach(symbol => {
+                if (!subscribedSymbols.current.has(symbol)) {
+                    if (api.readyState === WebSocket.OPEN) {
+                        api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
+                        subscribedSymbols.current.add(symbol);
+                    }
                 }
-            }
-        });
-    
+            });
+        } else {
+             setApiStatus('Paused');
+             symbols.forEach(symbol => {
+                 if (subscribedSymbols.current.has(symbol)) {
+                     // We don't actually 'forget' the stream as it might be expensive to re-subscribe
+                     // We just stop processing the data by not having the handleMessage active
+                 }
+             });
+        }
     }, [api, isConnected]);
 
     useEffect(() => {
-        const unsubscribe = subscribeToMessages(handleMessage);
-        return () => unsubscribe();
-    }, [handleMessage, subscribeToMessages]);
+        if (isVisible && isConnected) {
+            manageSubscriptions(true);
+            const unsubscribe = subscribeToMessages(handleMessage);
+            return () => {
+                unsubscribe();
+                manageSubscriptions(false);
+            };
+        } else {
+             manageSubscriptions(false);
+        }
+    }, [isVisible, isConnected, manageSubscriptions, handleMessage, subscribeToMessages]);
     
     useEffect(() => {
         filterAndSortData();
@@ -283,10 +306,7 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         const getDigitClass = (pct: number) => {
             if (pct >= 14) return 'signal-digit-hot'; if (pct >= 11) return 'signal-digit-warm'; return '';
         };
-        const runBot = (symbol: string, direction: string) => {
-            if (!confirm(`Start ${direction.toUpperCase()} bot for ${symbol}?\n\nBase stake: $1.00\nStop loss: $50.00 daily`)) return;
-            alert(`Bot started for ${symbol} (${direction})\n\nRisk management active:\n• $50 daily loss limit\n• 30s cooldown per symbol\n• Max 3 concurrent trades`);
-        };
+
         return (
              <div key={card.symbol} className="signal-card">
                 <div className="signal-card-header">

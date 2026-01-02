@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
@@ -44,7 +45,7 @@ interface DigitAnalysisContextType {
     setTicksToFetch: (ticks: number) => void;
     maxTicks: number;
     lastDigits: number[];
-    getOverUnder: (barrier: number) => { over: string; under: string; overCount: number; underCount: number };
+    getOverUnder: (barrier: number) => { over: string; under: string; equal: string; overCount: number; underCount: number; equalCount: number };
 }
 
 type Tick = {
@@ -144,7 +145,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
         ticksRef.current[currentIndexRef.current] = tick;
         digitCountsRef.current[tick.digit]++;
-        setLastDigits(prev => [...prev.slice(-49), tick.digit]);
+        setLastDigits(prev => [...prev.slice(-(ticksToFetch - 1)), tick.digit]);
         
         if (totalTicksProcessedRef.current < ticksToFetch) {
             totalTicksProcessedRef.current++;
@@ -181,7 +182,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
     const disconnect = useCallback((silent = false) => {
         if (ws.current) {
             if (subscriptionId.current) {
-                ws.current.send(JSON.stringify({ forget: subscriptionId.current }));
+                try { ws.current.send(JSON.stringify({ forget: subscriptionId.current })); } catch(e) {}
                 subscriptionId.current = null;
             }
             ws.current.onmessage = null;
@@ -253,15 +254,12 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
             if (data.history) {
                 const { prices } = data.history;
-                const newDigits: number[] = [];
-                prices.forEach((price: number) => {
-                    const digit = extractLastDigit(price, market);
-                    newDigits.push(digit);
-                    processTick({ price, digit, timestamp: Date.now() }, true);
+                prices.forEach((price: number, index: number) => {
+                    const tick = { price, digit: extractLastDigit(price, market), timestamp: Date.now() - (prices.length - index) * 1000 };
+                    processTick(tick, true);
+                    setCollectedCount(prev => prev + 1);
                 });
                 
-                setLastDigits(prev => [...prev, ...newDigits].slice(-50));
-                setCollectedCount(prices.length);
                 setIsCollecting(false);
                 updateStatus('connected', 'Real-time monitoring active');
                 ws.current?.send(JSON.stringify({ ticks: market, subscribe: 1 }));
@@ -284,7 +282,7 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
         };
 
         ws.current.onclose = () => {
-            if (status !== 'disconnected') {
+            if (status !== 'disconnected' && status !== 'stopped') {
               updateStatus('disconnected', 'Click Connect to start');
             }
             ws.current = null;
@@ -303,10 +301,11 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
 
     const getOverUnder = useCallback((barrier: number) => {
         const total = Math.min(totalTicksProcessedRef.current, ticksToFetch);
-        if (total === 0) return { over: '0.0%', under: '0.0%', overCount: 0, underCount: 0 };
+        if (total === 0) return { over: '0.0%', under: '0.0%', equal: '0.0%', overCount: 0, underCount: 0, equalCount: 0 };
     
         let overCount = 0;
         let underCount = 0;
+        let equalCount = 0;
     
         for (let i = 0; i < 10; i++) {
             const count = digitCountsRef.current[i];
@@ -314,14 +313,18 @@ export const DigitAnalysisProvider = ({ children }: { children: ReactNode }) => 
                 overCount += count;
             } else if (i < barrier) {
                 underCount += count;
+            } else {
+                equalCount += count;
             }
         }
         
         return {
             over: `${((overCount / total) * 100).toFixed(1)}%`,
             under: `${((underCount / total) * 100).toFixed(1)}%`,
+            equal: `${((equalCount / total) * 100).toFixed(1)}%`,
             overCount,
             underCount,
+            equalCount
         };
     }, [ticksToFetch]);
     
