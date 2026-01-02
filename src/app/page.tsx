@@ -30,16 +30,21 @@ function BotBuilderContent() {
   } = useBot();
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value === 'dcircle') {
-      if (digitAnalysisStatus !== 'connected' && digitAnalysisStatus !== 'connecting' && digitAnalysisStatus !== 'collecting') {
-        connectDigitAnalysis();
-      }
-    } else {
-      if (digitAnalysisStatus === 'connected' || digitAnalysisStatus === 'connecting' || digitAnalysisStatus === 'collecting') {
-        disconnectDigitAnalysis();
-      }
+    // Disconnect from dcircle if we are leaving it
+    if (activeTab === 'dcircle' && value !== 'dcircle') {
+        if (digitAnalysisStatus === 'connected' || digitAnalysisStatus === 'connecting' || digitAnalysisStatus === 'collecting') {
+            disconnectDigitAnalysis();
+        }
     }
+    
+    // Connect to dcircle if we are entering it
+    if (value === 'dcircle') {
+        if (digitAnalysisStatus !== 'connected' && digitAnalysisStatus !== 'connecting' && digitAnalysisStatus !== 'collecting') {
+            connectDigitAnalysis();
+        }
+    }
+
+    setActiveTab(value);
   };
 
   return (

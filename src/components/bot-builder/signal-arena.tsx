@@ -27,8 +27,8 @@ const playSound = (text: string) => {
     try {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-            utterance.rate = 1.2;
+utterance.lang = 'en-US';
+utterance.rate = 1.2;
             window.speechSynthesis.speak(utterance);
         } else {
             console.warn("Text-to-speech not supported in this browser.");
@@ -174,6 +174,7 @@ const SignalArena = () => {
     }), []);
 
     const filterAndSortData = useCallback(() => {
+        if (activeTab !== 'signal-arena') return;
         let filteredData = Object.values(analysisDataRef.current).filter(d => d !== null);
 
         const filterSymbols = FILTERS[activeFilter as keyof typeof FILTERS];
@@ -194,7 +195,7 @@ const SignalArena = () => {
         }
         
         setDisplayedCards(filteredData);
-    }, [activeFilter, FILTERS]);
+    }, [activeFilter, FILTERS, activeTab]);
 
     const runBotFromSignal = (signal: any, manualStart: boolean = false) => {
         const direction = signal.strong_signal_type.includes('Over') ? 'over' : 'under';
@@ -331,7 +332,7 @@ const SignalArena = () => {
         } else {
              setApiStatus('Disconnected');
         }
-    }, [isConnected, manageSubscriptions, handleMessage, subscribeToMessages, filterAndSortData, api]);
+    }, [isConnected, manageSubscriptions, handleMessage, subscribeToMessages, filterAndSortData, api, activeTab]);
     
     
     const renderCard = (card: any) => {
