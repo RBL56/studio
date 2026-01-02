@@ -127,11 +127,12 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 };
 // --- End of Analysis Logic ---
 
-const SignalArena = () => {
-    const { api, isConnected, subscribeToMessages, status: apiStatus, marketConfig } = useDerivApi();
+const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
+    const { api, isConnected, subscribeToMessages, marketConfig } = useDerivApi();
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
+    const [apiStatus, setApiStatus] = useState('Disconnected');
     
     const tickDataRef = useRef<{ [key: string]: number[] }>({});
     const analysisDataRef = useRef<{ [key: string]: any }>({});
@@ -149,8 +150,8 @@ const SignalArena = () => {
     const FILTERS = React.useMemo(() => ({
         'all': Object.keys(SYMBOL_CONFIG),
         'strong': [],
-        'over3': [],
-        'under6': [],
+        'over3': Object.keys(SYMBOL_CONFIG),
+        'under6': Object.keys(SYMBOL_CONFIG),
         'volatility': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'volatility'),
         'jump': Object.keys(SYMBOL_CONFIG).filter(s => SYMBOL_CONFIG[s].type === 'jump'),
     }), []);
@@ -159,14 +160,13 @@ const SignalArena = () => {
         let filteredData = Object.values(analysisDataRef.current).filter(d => d !== null);
 
         // Filtering
-        if (activeFilter !== 'all' && activeFilter !== 'over3' && activeFilter !== 'under6') {
-            filteredData = filteredData.filter(d => {
-                if (!d) return false;
-                if (activeFilter === 'strong') return d.strong_signal;
-                if (activeFilter === 'volatility') return SYMBOL_CONFIG[d.symbol]?.type === 'volatility';
-                if (activeFilter === 'jump') return SYMBOL_CONFIG[d.symbol]?.type === 'jump';
-                return true;
-            });
+        const filterSymbols = FILTERS[activeFilter as keyof typeof FILTERS];
+        if (filterSymbols) {
+          filteredData = filteredData.filter(d => filterSymbols.includes(d.symbol));
+        }
+
+        if (activeFilter === 'strong') {
+          filteredData = filteredData.filter(d => d.strong_signal);
         }
         
         // Sorting
@@ -179,7 +179,7 @@ const SignalArena = () => {
         }
         
         setDisplayedCards(filteredData);
-    }, [activeFilter]);
+    }, [activeFilter, FILTERS]);
 
     const runAnalysis = useCallback((symbol: string) => {
         const digits = tickDataRef.current[symbol];
@@ -238,9 +238,14 @@ const SignalArena = () => {
     }, [extractLastDigit, api, runAnalysis]);
 
     useEffect(() => {
-        if (!api || !isConnected) return;
+        if (!api || !isConnected) {
+            setApiStatus('Disconnected');
+            return;
+        };
+
+        setApiStatus('Connected');
     
-        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS] || Object.keys(SYMBOL_CONFIG);
+        const symbolsToSubscribe = Object.keys(SYMBOL_CONFIG);
     
         symbolsToSubscribe.forEach(symbol => {
             if (!subscribedSymbols.current.has(symbol)) {
@@ -251,7 +256,7 @@ const SignalArena = () => {
             }
         });
     
-    }, [api, isConnected, activeFilter, FILTERS]);
+    }, [api, isConnected]);
 
     useEffect(() => {
         const unsubscribe = subscribeToMessages(handleMessage);
@@ -260,7 +265,7 @@ const SignalArena = () => {
     
     useEffect(() => {
         filterAndSortData();
-    }, [analysisDataRef, activeFilter, filterAndSortData, updateTime]);
+    }, [activeFilter, updateTime, filterAndSortData]);
 
 
     const renderCard = (card: any) => {
@@ -321,7 +326,8 @@ const SignalArena = () => {
         }
 
         const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS] || Object.keys(SYMBOL_CONFIG);
-        const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol) || activeFilter === 'all' || activeFilter === 'over3' || activeFilter === 'under6');
+        const visibleCards = displayedCards;
+
         const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
             !analysisDataRef.current[symbol] || (tickDataRef.current[symbol]?.length || 0) < 100
         );
@@ -354,6 +360,10 @@ const SignalArena = () => {
             </>
         );
     };
+
+    if (!isVisible) {
+        return null;
+    }
 
     return (
         <div className="signal-center-body">

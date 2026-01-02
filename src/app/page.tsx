@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useDerivApi } from '@/context/deriv-api-context';
@@ -43,6 +44,8 @@ function BotBuilderContent() {
   return (
     <div className={cn("py-4 md:py-8")}>
         {isConnected ? (
+          <>
+          <SignalArena isVisible={activeTab === 'signal-arena'} />
           <Tabs value={activeTab} className="w-full md:grid md:grid-cols-[250px_1fr] gap-8" onValueChange={handleTabChange}>
               <TabsList className="flex-col h-auto hidden md:flex">
                   <TabsTrigger value="bot-builder" className="py-3 text-base w-full justify-start"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
@@ -51,9 +54,9 @@ function BotBuilderContent() {
                   <TabsTrigger value="trading-view" className="py-3 text-base w-full justify-start"><CandlestickChart className="mr-2 h-5 w-5" />TradingView</TabsTrigger>
               </TabsList>
               
-              <div className="md:hidden px-4">
-                 <ScrollArea className="w-full whitespace-nowrap pb-4">
-                    <TabsList className="inline-flex w-full mb-6">
+              <div className="md:hidden px-4 mb-4">
+                 <ScrollArea className="w-full whitespace-nowrap pb-2">
+                    <TabsList className="inline-flex w-full mb-4">
                         <TabsTrigger value="bot-builder" className="py-3 text-base"><Waypoints className="mr-2 h-5 w-5" />Bot Builder</TabsTrigger>
                         <TabsTrigger value="dcircle" className="py-3 text-base"><Circle className="mr-2 h-5 w-5" />DCircle</TabsTrigger>
                         <TabsTrigger value="signal-arena" className="py-3 text-base w-full justify-start"><Target className="mr-2 h-5 w-5" />Signal Arena</TabsTrigger>
@@ -62,7 +65,7 @@ function BotBuilderContent() {
                 </ScrollArea>
               </div>
 
-              <div>
+              <div className={cn(activeTab === 'signal-arena' ? 'hidden' : 'block')}>
                 <TabsContent value="bot-builder" className="mt-0 px-4 md:px-0">
                     <Tabs value={activeBuilderTab} className="w-full" onValueChange={setActiveBuilderTab}>
                         <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -104,10 +107,6 @@ function BotBuilderContent() {
                   </ScrollArea>
                 </TabsContent>
 
-                <TabsContent value="signal-arena" className="mt-0 px-4 md:px-0">
-                  <SignalArena />
-                </TabsContent>
-
                 <TabsContent value="trading-view" className="mt-0 px-4 md:px-0">
                     <div className="space-y-8">
                         <QuickTradePanel />
@@ -122,6 +121,7 @@ function BotBuilderContent() {
                 </TabsContent>
               </div>
           </Tabs>
+          </>
         ) : (
           <Card className="h-full flex flex-col justify-center items-center text-center py-16 mx-4 md:mx-0">
               <CardHeader>
