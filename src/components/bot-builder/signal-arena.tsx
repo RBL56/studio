@@ -5,8 +5,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDerivApi } from '@/context/deriv-api-context';
 import { cn } from '@/lib/utils';
-import { Bot } from 'lucide-react';
+import { Bot, Zap } from 'lucide-react';
 import { useBot } from '@/context/bot-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from '../ui/badge';
 
 // --- Sound Utility ---
 const playSound = (text: string) => {
@@ -130,11 +141,12 @@ const SYMBOL_CONFIG: { [key: string]: { name: string, type: string } } = {
 
 const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
     const { api, isConnected, subscribeToMessages, marketConfig } = useDerivApi();
-    const { activeTab } = useBot();
+    const { activeTab, startBot } = useBot();
     const [displayedCards, setDisplayedCards] = useState<any[]>([]);
     const [activeFilter, setActiveFilter] = useState('volatility');
     const [updateTime, setUpdateTime] = useState(new Date().toLocaleTimeString());
     const [apiStatus, setApiStatus] = useState('Disconnected');
+    const [signalAlert, setSignalAlert] = useState<any | null>(null);
     
     const tickDataRef = useRef<{ [key: string]: number[] }>({});
     const analysisDataRef = useRef<{ [key: string]: any }>({});
@@ -181,9 +193,25 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         setDisplayedCards(filteredData);
     }, [activeFilter, FILTERS]);
 
-    const runBot = (symbol: string, direction: string) => {
-        if (!confirm(`Start ${direction.toUpperCase()} bot for ${symbol}?\n\nBase stake: $1.00\nStop loss: $50.00 daily`)) return;
-        alert(`Bot started for ${symbol} (${direction})\n\nRisk management active:\n• $50 daily loss limit\n• 30s cooldown per symbol\n• Max 3 concurrent trades`);
+    const runBotFromSignal = (signal: any) => {
+        const direction = signal.strong_signal_type.includes('Over') ? 'over' : 'under';
+        const prediction = signal.strong_signal_type.includes('Over') ? 3 : 6;
+        
+        startBot({
+            market: signal.symbol,
+            tradeType: 'over_under',
+            predictionType: direction,
+            lastDigitPrediction: prediction,
+            initialStake: 1.00,
+            ticks: 1,
+            takeProfit: 10,
+            stopLossType: 'amount',
+            stopLossAmount: 50,
+            useMartingale: true,
+            martingaleFactor: 2.1,
+            useBulkTrading: false,
+            useEntryPoint: false,
+        });
     };
 
     const runAnalysis = useCallback((symbol: string) => {
@@ -194,13 +222,12 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
                 const previousResult = analysisDataRef.current[symbol];
                 if (result.strong_signal && (!previousResult || !previousResult.strong_signal)) {
                     if (!strongSignalNotified.current.has(symbol)) {
-                         const message = `${result.name}, ${result.strong_signal_type}`;
-                         playSound(message);
+                        const message = `${result.name}, ${result.strong_signal_type}`;
+                        playSound(message);
                         strongSignalNotified.current.add(symbol);
 
-                         if (activeTab !== 'signal-arena' && activeTab !== 'trading-view') {
-                            const direction = result.strong_signal_type.includes('Over') ? 'over' : 'under';
-                            runBot(result.symbol, direction);
+                        if (activeTab !== 'signal-arena' && activeTab !== 'trading-view') {
+                           setSignalAlert(result);
                         }
                     }
                 } else if (!result.strong_signal && previousResult && previousResult.strong_signal) {
@@ -266,15 +293,21 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
              setApiStatus('Paused');
              symbols.forEach(symbol => {
                  if (subscribedSymbols.current.has(symbol)) {
-                     // We don't actually 'forget' the stream as it might be expensive to re-subscribe
-                     // We just stop processing the data by not having the handleMessage active
+                    if (api.readyState === WebSocket.OPEN) {
+                        try {
+                            api.send(JSON.stringify({ forget: symbol }));
+                        } catch (e) {
+                            console.error("Error forgetting subscription", e);
+                        }
+                    }
+                    subscribedSymbols.current.delete(symbol);
                  }
              });
         }
     }, [api, isConnected]);
 
     useEffect(() => {
-        if (isVisible && isConnected) {
+        if (isConnected) {
             manageSubscriptions(true);
             const unsubscribe = subscribeToMessages(handleMessage);
             return () => {
@@ -284,7 +317,7 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         } else {
              manageSubscriptions(false);
         }
-    }, [isVisible, isConnected, manageSubscriptions, handleMessage, subscribeToMessages]);
+    }, [isConnected, manageSubscriptions, handleMessage, subscribeToMessages]);
     
     useEffect(() => {
         filterAndSortData();
@@ -331,8 +364,8 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
                 <div className="signal-card-footer">
                     <div className="signal-hot-digits"><span>🔥 Hot Digits:</span><span>{card.hot_digits.length > 0 ? card.hot_digits.join(', ') : 'None'}</span></div>
                     <div className="signal-bot-buttons">
-                        <button className="signal-bot-btn signal-bot-over" disabled={card.percentages.over_3 < 66} onClick={() => runBot(card.symbol, 'over')}><Bot className="h-4 w-4" /> OVER</button>
-                        <button className="signal-bot-btn signal-bot-under" disabled={card.percentages.under_6 < 66} onClick={() => runBot(card.symbol, 'under')}><Bot className="h-4 w-4" /> UNDER</button>
+                        <button className="signal-bot-btn signal-bot-over" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Over 3'})}><Bot className="h-4 w-4" /> OVER</button>
+                        <button className="signal-bot-btn signal-bot-under" onClick={() => runBotFromSignal({...card, strong_signal_type: 'Strong Under 6'})}><Bot className="h-4 w-4" /> UNDER</button>
                     </div>
                 </div>
                 <div className="signal-update-time">Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
@@ -341,6 +374,8 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
     }
     
     const renderContent = () => {
+        if (!isVisible) return null;
+
         if (!isConnected) {
             return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Connecting to Deriv API...</p></div>;
         }
@@ -381,29 +416,60 @@ const SignalArena = ({ isVisible }: { isVisible: boolean }) => {
         );
     };
 
-    if (!isVisible) {
-        return null;
+    const handleStartBotFromAlert = () => {
+        if(signalAlert) {
+            runBotFromSignal(signalAlert);
+        }
+        setSignalAlert(null);
     }
 
     return (
         <div className="signal-center-body">
-            <div className="signal-center-container">
-                <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
-                <div className="signal-risk-panel">
-                    <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
-                    <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
+            {isVisible && (
+                <div className="signal-center-container">
+                    <div className="signal-center-header"><h1><span>🎯</span> Deriv Digit Signal Center</h1><div className="signal-status-bar"><div className="signal-status-indicator"><div className={cn("signal-status-dot", { 'connected': isConnected })}></div><span>{apiStatus}</span></div><span>Last Update: {updateTime}</span></div></div>
+                    <div className="signal-risk-panel">
+                        <div className="signal-risk-item"><span className="signal-risk-label">Daily Loss Limit</span><span className="signal-risk-value">$50.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Max Concurrent Trades</span><span className="signal-risk-value">3</span></div>
+                        <div className="signal-risk-item"><span className="signal-risk-label">Current Loss</span><span className="signal-risk-value risk-ok">$0.00</span></div><div className="signal-risk-item"><span className="signal-risk-label">Base Stake</span><span className="signal-risk-value">$1.00</span></div>
+                    </div>
+                    <div className="signal-filters">
+                        {Object.keys(FILTERS).map(filter => (
+                            <button key={filter} className={cn("signal-filter-btn", { 'active': activeFilter === filter })} onClick={() => setActiveFilter(filter)}>
+                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="signal-cards-grid">{renderContent()}</div>
                 </div>
-                <div className="signal-filters">
-                    {Object.keys(FILTERS).map(filter => (
-                        <button key={filter} className={cn("signal-filter-btn", { 'active': activeFilter === filter })} onClick={() => setActiveFilter(filter)}>
-                            {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                        </button>
-                    ))}
-                </div>
-                <div className="signal-cards-grid">{renderContent()}</div>
-            </div>
+            )}
+
+            <AlertDialog open={!!signalAlert} onOpenChange={() => setSignalAlert(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        <Zap className="text-yellow-400" />
+                        Strong Signal Detected!
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        A strong signal has been found and a bot can be automatically started for you.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="my-4">
+                        <p className="font-bold text-lg">{signalAlert?.name}</p>
+                        <Badge>{signalAlert?.strong_signal_type}</Badge>
+                    </div>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleStartBotFromAlert}>
+                        <Bot className="mr-2 h-4 w-4" /> Start Bot
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
 
 export default SignalArena;
+
+    
