@@ -190,7 +190,7 @@ const SignalArena = () => {
     useEffect(() => {
         if (!api || !isConnected) return;
     
-        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS] || [];
+        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS] || Object.keys(SYMBOL_CONFIG);
         let delay = 0;
     
         symbolsToSubscribe.forEach(symbol => {
@@ -282,7 +282,7 @@ const SignalArena = () => {
                         <button className="signal-bot-btn signal-bot-under" disabled={card.percentages.under_6 < 66} onClick={() => runBot(card.symbol, 'under')}><Bot className="h-4 w-4" /> UNDER</button>
                     </div>
                 </div>
-                <div className="signal-update-time">Ticks Analyzed: {card.ticks_analyzed} • Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
+                <div className="signal-update-time">Updated: {new Date(card.update_time).toLocaleTimeString()}</div>
             </div>
         );
     }
@@ -292,7 +292,7 @@ const SignalArena = () => {
             return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Connecting to Deriv API...</p></div>;
         }
 
-        const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS];
+        const symbolsInFilter = FILTERS[activeFilter as keyof typeof FILTERS] || Object.keys(SYMBOL_CONFIG);
         const visibleCards = displayedCards.filter(card => symbolsInFilter.includes(card.symbol));
         const loadingOrNoDataSymbols = symbolsInFilter.filter(symbol => 
             !analysisData[symbol] || (tickData[symbol]?.length || 0) < 100
