@@ -157,25 +157,9 @@ const SignalArena = () => {
             if (data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired' && data.error.code !== 'ForgetInvalid' && data.error.code !== 'RateLimit' && data.error.code !== 'InvalidSymbol') {
                  console.error("Signal Arena API Error:", data.error.message);
             }
-            if (data.error.echo_req?.ticks_history) {
-                const symbol = data.error.echo_req.ticks_history;
-                setTickData(prev => ({...prev, [symbol]: [] }));
-            }
             return;
         }
 
-        if (data.msg_type === 'history') {
-            const symbol = data.echo_req.ticks_history;
-            const digits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
-            setTickData(prev => {
-                const updatedTicks = digits.slice(-500);
-                return { ...prev, [symbol]: updatedTicks };
-            });
-            if (api && api.readyState === WebSocket.OPEN) {
-                api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-            }
-        }
-        
         if (data.msg_type === 'tick') {
             setTickCount(prev => prev + 1);
             const tick = data.tick;
@@ -192,7 +176,7 @@ const SignalArena = () => {
                 });
             }
         }
-    }, [api, extractLastDigit]);
+    }, [extractLastDigit]);
 
     useEffect(() => {
         if (!api || !isConnected) return;
@@ -204,16 +188,11 @@ const SignalArena = () => {
             if (!subscribedSymbols.current.has(symbol)) {
                 setTimeout(() => {
                     if (api && api.readyState === WebSocket.OPEN) {
-                         api.send(JSON.stringify({
-                            ticks_history: symbol,
-                            end: "latest",
-                            count: 500,
-                            style: "ticks"
-                        }));
+                         api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
                         subscribedSymbols.current.add(symbol);
                     }
                 }, delay);
-                delay += 350; // Stagger requests to avoid rate limiting
+                delay += 100; // Stagger requests slightly to be safe
             }
         });
     
@@ -311,9 +290,9 @@ const SignalArena = () => {
         );
 
         if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === symbolsInFilter.length) {
-             const loadingSymbolsCount = symbolsInFilter.filter(s => subscribedSymbols.current.has(s) && (tickData[s] === undefined || (tickData[s]?.length ?? 0) < 500)).length;
+             const loadingSymbolsCount = symbolsInFilter.filter(s => subscribedSymbols.current.has(s) && (tickData[s] === undefined || (tickData[s]?.length ?? 0) < 100)).length;
              if (loadingSymbolsCount > 0) {
-                 return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Fetching historical data for {loadingSymbolsCount} market(s)...</p></div>;
+                 return <div className="signal-loading"><div className="signal-loading-spinner"></div><p>Waiting for live data for {loadingSymbolsCount} market(s)...</p></div>;
              }
         }
        
@@ -331,7 +310,7 @@ const SignalArena = () => {
                         <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol]?.name || symbol}</h3><div className="symbol">{symbol}</div></div></div>
                         <div className="signal-loading" style={{padding: '20px 0'}}>
                             <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
-                            <p style={{fontSize: '0.875rem'}}>Collecting data... ({(tickData[symbol]?.length || 0)}/500)</p>
+                            <p style={{fontSize: '0.875rem'}}>Collecting live ticks... ({(tickData[symbol]?.length || 0)}/100)</p>
                         </div>
                     </div>
                 ))}
