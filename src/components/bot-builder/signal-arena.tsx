@@ -154,10 +154,19 @@ const SignalArena = () => {
 
     const handleMessage = useCallback((data: any) => {
         if (data.error) {
-            if (data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired' && data.error.code !== 'ForgetInvalid' && data.error.code !== 'RateLimit' && data.error.code !== 'InvalidSymbol') {
+            if (data.error.code !== 'AlreadySubscribed' && data.error.code !== 'AuthorizationRequired' && data.error.code !== 'ForgetInvalid' && data.error.code !== 'RateLimit' && data.error.code !== 'InvalidSymbol' && data.error.code !== 'MarketIsClosed') {
                  console.error("Signal Arena API Error:", data.error.message);
             }
             return;
+        }
+
+        if (data.msg_type === 'history') {
+            const symbol = data.echo_req.ticks_history;
+            const newDigits = data.history.prices.map((p: string) => extractLastDigit(parseFloat(p), symbol));
+            setTickData(prev => ({ ...prev, [symbol]: newDigits }));
+            if (api && api.readyState === WebSocket.OPEN) {
+                api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+            }
         }
 
         if (data.msg_type === 'tick') {
@@ -176,27 +185,27 @@ const SignalArena = () => {
                 });
             }
         }
-    }, [extractLastDigit]);
+    }, [extractLastDigit, api]);
 
     useEffect(() => {
         if (!api || !isConnected) return;
     
-        const symbolsToSubscribe = Object.keys(SYMBOL_CONFIG);
+        const symbolsToSubscribe = FILTERS[activeFilter as keyof typeof FILTERS] || [];
         let delay = 0;
     
         symbolsToSubscribe.forEach(symbol => {
             if (!subscribedSymbols.current.has(symbol)) {
                 setTimeout(() => {
                     if (api && api.readyState === WebSocket.OPEN) {
-                         api.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+                        api.send(JSON.stringify({ ticks_history: symbol, end: 'latest', count: 500, style: 'ticks' }));
                         subscribedSymbols.current.add(symbol);
                     }
                 }, delay);
-                delay += 100; // Stagger requests slightly to be safe
+                delay += 350; 
             }
         });
     
-    }, [api, isConnected]);
+    }, [api, isConnected, activeFilter, FILTERS]);
 
     useEffect(() => {
         const unsubscribe = subscribeToMessages(handleMessage);
@@ -296,7 +305,7 @@ const SignalArena = () => {
              }
         }
        
-        if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === 0) {
+        if (visibleCards.length === 0 && loadingOrNoDataSymbols.length === 0 && activeFilter !== 'all' ) {
             return <div className="signal-no-data"><p>No signals match the current filter.</p></div>
         }
         
@@ -310,7 +319,7 @@ const SignalArena = () => {
                         <div className="signal-card-header"><div className="signal-symbol-info"><h3>{SYMBOL_CONFIG[symbol]?.name || symbol}</h3><div className="symbol">{symbol}</div></div></div>
                         <div className="signal-loading" style={{padding: '20px 0'}}>
                             <div className="signal-loading-spinner" style={{width: '24px', height: '24px', borderTopColor: '#3b82f6'}}></div>
-                            <p style={{fontSize: '0.875rem'}}>Collecting live ticks... ({(tickData[symbol]?.length || 0)}/100)</p>
+                            <p style={{fontSize: '0.875rem'}}>Collecting historical data... ({(tickData[symbol]?.length || 0)}/500)</p>
                         </div>
                     </div>
                 ))}
@@ -340,5 +349,7 @@ const SignalArena = () => {
 };
 
 export default SignalArena;
+
+    
 
     
